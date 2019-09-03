@@ -6,7 +6,7 @@ __virtualname__ = 'asyncssh'
 
 def __init__(hub):
     '''
-
+    Set up the objects to hold connection instances
     '''
     hub.tunnel.asyncssh.CONS = {}
 
