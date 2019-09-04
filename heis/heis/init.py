@@ -40,7 +40,6 @@ async def run(hub):
     remote system calls
     '''
     roster = hub.OPT['heis']['roster']
-    coros = []
     targets = await hub.roster.init.read(
             roster,
             hub.OPT['heis']['tgt'],
