@@ -1,5 +1,7 @@
 # Import third party libs
 import asyncssh
+import inspect
+from typing import Any, Dict
 
 __virtualname__ = 'asyncssh'
 
@@ -11,33 +13,57 @@ def __init__(hub):
     hub.tunnel.asyncssh.CONS = {}
 
 
-async def create(hub, name, target):
+def _autodetect_asyncssh_opt(hub, option: str) -> Any:
+    '''
+    '''
+    return None
+
+
+def _get_asyncssh_opt(hub, target: Dict[str: ...], option: str, default: Any = None) -> Any:
+    '''
+    Get an assyncssh option from the target/roster first, if that fails get it from the config, if not there
+    then try to autodetect the option (I.E. Checking for keys in the .ssh folder of the target)
+    :param option:
+    :param target:
+    :return:
+    '''
+    result = target.get(option)
+    if not result:
+        # TODO access option from config the correct way
+        result = hub.conf.get(option)
+    if not result:
+        result = _autodetect_asyncssh_opt(hub, option)
+    if not result:
+        result = default
+    return result
+
+
+async def create(hub, name: str, target: Dict[str: ...]):
     '''
     Create a connection to the remote system using a dict of values that map
     to this plugin. Name the connection for future use, the connection data
     will be stored on the hub under hub.tunnel.asyncssh.CONS
+    :param name:
+    :param target:
     '''
-    # TODO: Add support for many more options in the target
+    # The id MUST be in the target, everything else might be in the target, conf, or elsewhere
     id_ = target.get('host', target.get('id'))
-    port = target.get('port', 22)
-    username = target.get('username')
-    password = target.get('password')
-    known_hosts = target.get('known_hosts')
 
-    conn = await asyncssh.connect(
-        id_,
-        port=port,
-        username=username,
-        password=password,
-        known_hosts=known_hosts,
-        agent_path=None)
+    # Check for each possible SSHClientConnectionOption in the target, config, then autodetect (if necessary)
+    ssh_client_connection_options = {
+        arg: _get_asyncssh_opt(hub, target, arg) for arg in
+        # Skip the first argument which will always be 'self'
+        inspect.getfullargspec(asyncssh.SSHClientConnectionOptions.prepare).args[1:]
+    }
+
+    conn = await asyncssh.connect(id_, **ssh_client_connection_options)
     sftp = await conn.start_sftp_client()
     hub.tunnel.asyncssh.CONS[name] = {
         'con': conn,
         'sftp': sftp}
 
 
-async def send(hub, name, source, dest):
+async def send(hub, name: str, source: str, dest: str):
     '''
     Take the file located at source and send it to the remote system
     '''
@@ -45,7 +71,7 @@ async def send(hub, name, source, dest):
     await sftp.put(source, dest)
 
 
-async def get(hub, name, source, dest):
+async def get(hub, name: str, source: str, dest: str):
     '''
     Take the file located on the remote system and copy it locally
     '''
@@ -53,7 +79,7 @@ async def get(hub, name, source, dest):
     await sftp.get(source, dest)
 
 
-async def cmd(hub, name, cmd):
+async def cmd(hub, name: str, cmd: str):
     '''
     Execute the given command on the machine associated witht he named connection
     '''
@@ -61,7 +87,7 @@ async def cmd(hub, name, cmd):
     return await con.run(cmd)
 
 
-async def tunnel(hub, name, remote, local):
+async def tunnel(hub, name: str, remote: str, local: str):
     '''
     Given the local and remote addrs create a tcp tunnel through the connection
     '''
