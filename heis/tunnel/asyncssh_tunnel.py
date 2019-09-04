@@ -16,6 +16,7 @@ def __init__(hub):
 def _autodetect_asyncssh_opt(hub, option: str) -> Any:
     '''
     '''
+    # TODO autodetect certain options
     return None
 
 
@@ -29,8 +30,7 @@ def _get_asyncssh_opt(hub, target: Dict[str: ...], option: str, default: Any = N
     '''
     result = target.get(option)
     if not result:
-        # TODO access option from config the correct way
-        result = hub.conf.get(option)
+        result = hub.OPT['heis'].get(option)
     if not result:
         result = _autodetect_asyncssh_opt(hub, option)
     if not result:
