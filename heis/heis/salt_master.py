@@ -6,6 +6,7 @@ import secrets
 import asyncio
 import os
 import tempfile
+from typing import Dict, List
 
 CONFIG = '''master: 127.0.0.1
 master_port: {master_port}
@@ -14,7 +15,7 @@ root_dir: {root_dir}
 '''
 
 
-async def run(hub, targets):
+async def run(hub, targets: List[Dict[str: ...]]):
     '''
     This plugin creates the salt specific tunnel, and then starts the remote
     minion and attatches it to a currently running master
@@ -25,7 +26,7 @@ async def run(hub, targets):
     await asyncio.gather(*coros)
 
 
-def mk_config(hub, root_dir):
+def mk_config(hub, root_dir: str):
     '''
     Create a minion config to use with this execution and return the file path
     for said config
@@ -36,7 +37,7 @@ def mk_config(hub, root_dir):
     return path
 
 
-async def single(hub, target):
+async def single(hub, target: List[Dict[str: ...]]):
     '''
     Execute a single async connection
     '''

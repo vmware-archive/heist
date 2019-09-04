@@ -4,9 +4,10 @@
 # Import python libs
 import asyncio
 import types
+from typing import Any, Dict, List
 
 
-async def read(hub, roster, tgt, tgt_type):
+async def read(hub, roster: str, tgt: str, tgt_type: str) -> List[Dict[str: Any]]:
     '''
     Given the rosters to read in, the tgt and the tgt_type
     '''
