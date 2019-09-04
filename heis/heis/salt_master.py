@@ -15,14 +15,14 @@ root_dir: {root_dir}
 '''
 
 
-async def run(hub, targets: List[Dict[str: ...]]):
+async def run(hub, remotes: List[Dict[str: ...]]):
     '''
     This plugin creates the salt specific tunnel, and then starts the remote
     minion and attatches it to a currently running master
     '''
     coros = []
-    for target in targets:
-        coros.append(hub.heis.salt_master.single(target))
+    for remote in remotes:
+        coros.append(hub.heis.salt_master.single(remote))
     await asyncio.gather(*coros)
 
 
@@ -37,7 +37,7 @@ def mk_config(hub, root_dir: str):
     return path
 
 
-async def single(hub, target: List[Dict[str: ...]]):
+async def single(hub, remote: List[Dict[str: ...]]):
     '''
     Execute a single async connection
     '''
@@ -48,8 +48,8 @@ async def single(hub, target: List[Dict[str: ...]]):
     config = hub.heis.salt_master.mk_config(root_dir)
     # create tunnel
     t_name = secrets.token_hex()
-    t_type = target.get('tunnel', 'asyncssh')
-    await getattr(hub, f'tunnel.{t_type}.create')(t_name, target)
+    t_type = remote.get('tunnel', 'asyncssh')
+    await getattr(hub, f'tunnel.{t_type}.create')(t_name, remote)
 
     # run salt deployment
     await getattr(hub, f'tunnel.{t_type}.cmd')(t_name, f'mkdir -p {run_dir}/conf')

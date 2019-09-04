@@ -40,9 +40,6 @@ async def run(hub):
     remote system calls
     '''
     roster = hub.OPT['heis']['roster']
-    targets = await hub.roster.init.read(
-            roster,
-            hub.OPT['heis']['tgt'],
-            hub.OPT['heis']['tgt_type'])
+    remotes = await hub.roster.init.read(roster)
     manager = hub.OPT['heis']['manager']
-    await getattr(hub, f'heis.{manager}.run')(targets)
+    await getattr(hub, f'heis.{manager}.run')(remotes)
