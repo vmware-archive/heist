@@ -7,7 +7,7 @@ import types
 from typing import Any, Dict, List
 
 
-async def read(hub, roster: str) -> List[Dict[str: Any]]:
+async def read(hub, roster: str) -> List[Dict[str, Any]]:
     '''
     Given the rosters to read in, the tgt and the tgt_type
     '''

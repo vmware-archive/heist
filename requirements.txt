@@ -1,2 +1,3 @@
-pop
-asyncssh
+asyncssh>=1.18.0
+pop>=7.0.0
+pyyaml>=5.1.2

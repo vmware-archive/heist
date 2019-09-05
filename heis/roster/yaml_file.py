@@ -2,13 +2,13 @@
 import os
 # Import third party libs
 import yaml
-from typing import Dict
+from typing import Any, Dict
 
 
 __virtualname__ = 'yaml'
 
 
-async def read(hub) -> Dict[str:...]:
+async def read(hub) -> Dict[str, Any]:
     '''
     Read in the data from the configured rosters
     '''
