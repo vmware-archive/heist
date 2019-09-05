@@ -23,5 +23,4 @@ DYNE = {
         'heis': ['heis'],
         'tunnel': ['tunnel'],
         'roster': ['roster'],
-        'tgt': ['tgt'],
         }

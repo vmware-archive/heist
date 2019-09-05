@@ -8,7 +8,7 @@ import shutil
 from setuptools import setup, Command
 
 NAME = 'heis'
-DESC = ('')
+DESC = ('Ephemeral software tunneling and delivery system')
 
 # Version info -- read without importing
 _locals = {}

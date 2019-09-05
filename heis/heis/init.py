@@ -24,7 +24,6 @@ def load_subs(hub):
     '''
     hub.pop.sub.add(dyne_name='roster')
     hub.pop.sub.add(dyne_name='tunnel')
-    hub.pop.sub.add(dyne_name='tgt')
 
 
 def start(hub):
