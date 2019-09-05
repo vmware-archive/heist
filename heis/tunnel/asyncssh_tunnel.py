@@ -20,7 +20,7 @@ def _autodetect_asyncssh_opt(hub, option: str) -> Any:
     return None
 
 
-def _get_asyncssh_opt(hub, target: Dict[str: ...], option: str, default: Any = None) -> Any:
+def _get_asyncssh_opt(hub, target: Dict[str, Any], option: str, default: Any = None) -> Any:
     '''
     Get an assyncssh option from the target/roster first, if that fails get it from the config, if not there
     then try to autodetect the option (I.E. Checking for keys in the .ssh folder of the target)
@@ -38,7 +38,7 @@ def _get_asyncssh_opt(hub, target: Dict[str: ...], option: str, default: Any = N
     return result
 
 
-async def create(hub, name: str, target: Dict[str: ...]):
+async def create(hub, name: str, target: Dict[str, Any]):
     '''
     Create a connection to the remote system using a dict of values that map
     to this plugin. Name the connection for future use, the connection data
