@@ -1,11 +1,6 @@
 # Import python libs
 import os
-# Import third party libs
-import yaml
 from typing import Any, Dict
-
-
-__virtualname__ = 'yaml'
 
 
 async def read(hub) -> Dict[str, Any]:
@@ -15,7 +10,6 @@ async def read(hub) -> Dict[str, Any]:
     ret = {}
     for fn in os.listdir(hub.OPT['heis']['roster_dir']):
         full = os.path.join(hub.OPT['heis']['roster_dir'], fn)
-        with open(full, 'r') as rfh:
-            ret.update(yaml.safe_load(rfh.read()))
+        ret.update(hub.rend.init.parse(full, 'yaml'))
     # TODO: Validate format (Maybe do it in the init)
     return ret
