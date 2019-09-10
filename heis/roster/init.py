@@ -11,10 +11,9 @@ async def read(hub, roster: str) -> List[Dict[str, Any]]:
     '''
     Given the rosters to read in, the tgt and the tgt_type
     '''
-    ready = {}
     ret = []
-    func = getattr(hub, f'roster.{roster}.read')
-    ready = await func()
+
+    ready = await getattr(hub, f'roster.{roster}.read')()
     for id_, condition in ready.items():
         if 'id' not in condition:
             condition['id'] = id_
