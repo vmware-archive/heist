@@ -1,0 +1,42 @@
+#!/usr/bin/python3
+from pop.hub import Hub
+import pop.utils.testing as testing
+import heis.tunnel.asyncssh_tunnel as asyncssh_tunnel
+import tests.unit.helpers.mock_hub as helpers
+import mock
+
+
+class TestAsyncSSH:
+    def test__get_asyncssh_opt_target(self):
+        '''
+        Test getting option from the target
+        '''
+        mock_hub = helpers.mock_hub()
+        mock_hub.OPT = {'heis': {'username', 'opt'}}
+        target = {'username': 'target'}
+        result = asyncssh_tunnel._get_asyncssh_opt(mock_hub, target=target, option='username', default='default')
+        assert result == 'target'
+
+    def test__get_asyncssh_opt_config(self):
+        '''
+        Test getting option from the config if target isn't available
+        '''
+        mock_hub = helpers.mock_hub()
+        mock_hub.OPT = {'heis': {'username': 'opt'}}
+        target = {}
+        result = asyncssh_tunnel._get_asyncssh_opt(mock_hub, target=target, option='username', default='default')
+        assert result == 'opt'
+
+    @mock.patch('heis.tunnel.asyncssh_tunnel._autodetect_asyncssh_opt', return_value='autodetect')
+    def test__get_asyncssh_opt_autodetect(self, mocked_autodetect):
+        '''
+        Test getting option from autodetect of target and config aren't available
+        '''
+        mock_hub = helpers.mock_hub()
+        mock_hub.OPT = {'heis': {}}
+        target = {}
+        result = asyncssh_tunnel._get_asyncssh_opt(mock_hub, target=target, option='username', default='default')
+        assert result == 'autodetect'
+
+    def test_autodetect_asyncssh_opt(self):
+        ...

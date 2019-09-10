@@ -37,7 +37,7 @@ def mk_config(hub, root_dir: str):
     return path
 
 
-async def single(hub, remote: List[Dict[str, Any]]):
+async def single(hub, remote: Dict[str, Any]):
     '''
     Execute a single async connection
     '''
@@ -52,16 +52,17 @@ async def single(hub, remote: List[Dict[str, Any]]):
     await getattr(hub, f'tunnel.{t_type}.create')(t_name, remote)
 
     # run salt deployment
-    await getattr(hub, f'tunnel.{t_type}.cmd')(t_name, f'mkdir -p {run_dir}/conf')
-    await getattr(hub, f'tunnel.{t_type}.cmd')(t_name, f'mkdir -p {run_dir}/root')
-    await getattr(hub, f'tunnel.{t_type}.send')(t_name, config, f'{run_dir}/conf/minion')
-    await getattr(hub, f'tunnel.{t_type}.send')(t_name, minion, f'{run_dir}/salt-minion.pex')
-    await getattr(hub, f'tunnel.{t_type}.send')(t_name, pytar, f'{run_dir}/py3.txz')
-    await getattr(hub, f'tunnel.{t_type}.cmd')(t_name, f'tar -xvf {run_dir}/py3.txz -C {run_dir}')
+    await getattr(hub, f'tunnel.{t_type}.cmd')(t_name, f'mkdir -p {os.path.join(run_dir, "conf")}')
+    await getattr(hub, f'tunnel.{t_type}.cmd')(t_name, f'mkdir -p {os.path.join(run_dir, "root")}')
+    await getattr(hub, f'tunnel.{t_type}.send')(t_name, config, os.path.join(run_dir, 'conf', 'minion'))
+    await getattr(hub, f'tunnel.{t_type}.send')(t_name, minion, os.path.join(run_dir, 'salt-minion.pex'))
+    await getattr(hub, f'tunnel.{t_type}.send')(t_name, pytar, os.path.join(run_dir, 'py3.txz'))
+    await getattr(hub, f'tunnel.{t_type}.cmd')(t_name, f'tar -xvf {os.path.join(run_dir, "py3.txz")} -C {run_dir}')
     os.remove(config)
     # validate deployment
     # Create tunnel back to master
     await getattr(hub, f'tunnel.{t_type}.tunnel')(t_name, 44505, 4505)
     await getattr(hub, f'tunnel.{t_type}.tunnel')(t_name, 44506, 4506)
     # Start minion
-    ret = await getattr(hub, f'tunnel.{t_type}.cmd')(t_name, f'{run_dir}/py3/bin/python3 {run_dir}/salt-minion.pex --config-dir {run_dir}/conf')
+    await getattr(hub, f'tunnel.{t_type}.cmd')(
+        t_name, f'{os.path.join(run_dir, "py3", "bin", "python3")} {os.path.join(run_dir, "salt-minion.pex")} --config-dir {os.path.join(run_dir, "conf")}')
