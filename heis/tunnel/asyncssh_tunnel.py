@@ -49,10 +49,14 @@ async def create(hub, name: str, target: Dict[str, Any]):
     # The id MUST be in the target, everything else might be in the target, conf, or elsewhere
     id_ = target.get('host', target.get('id'))
 
-    ssh_client_connection_options = {}
+    possible_options = set(inspect.getfullargspec(asyncssh.SSHClientConnectionOptions.prepare).args)
+    # Remove options from `inspect` that don't belong
+    possible_options -= {'self', 'arg', 'kwarg'}
+    # Add connection options that aren't specified in `SSHClientConnectionOptions.prepare`
+    possible_options.update({'port', 'loop', 'tunnel', 'family', 'flags', 'local_addr', 'options'})
     # Check for each possible SSHClientConnectionOption in the target, config, then autodetect (if necessary)
     con_opts = {}
-    for arg in inspect.getfullargspec(asyncssh.SSHClientConnectionOptions.prepare).args[1:]:
+    for arg in possible_options:
         opt = _get_asyncssh_opt(hub, target, arg)
         if opt is not None:
             con_opts[arg] = opt

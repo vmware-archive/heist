@@ -2,22 +2,17 @@
 # Import Python libs
 import asyncio
 import tempfile
-from typing import List, Tuple
-from unittest.mock import create_autospec
-import secrets
+from typing import Tuple
 
 # Import local libs
 import heis.tunnel.asyncssh_tunnel as asyncssh_tunnel
-import tests.helpers.mock_hub as helpers
-from tests.helpers.asyncssh_server import TestingAsyncSSHServer
+from tests.helpers.asyncssh_server import TestingAsyncSFTPServer
 
 # Import 3rd-party libs
-import pop.utils.testing as testing
+import asyncssh
 import pytest
 from pop.hub import Hub
-from M2Crypto import RSA, X509
-
-PORT_RANGE = range(4400, 4410)
+from M2Crypto import RSA
 
 
 @pytest.fixture
@@ -28,58 +23,45 @@ def hub():
 
 
 @pytest.fixture
-def async_ssh_server_data():
-    # Create temporary SSH keys for server
+async def async_sftp_server_data(port: int = 5050, *args, **kwargs) -> TestingAsyncSFTPServer:
     private_key = tempfile.NamedTemporaryFile(prefix='id_rsa_')
     public_key = tempfile.NamedTemporaryFile(prefix='id_rsa_', suffix='.pub')
     key = RSA.gen_key(1024, 65537)
     key.save_key(private_key.name, cipher=None)
     key.save_pub_key(public_key.name)
 
-    servers = []
-    for port in PORT_RANGE:
-        server = TestingAsyncSSHServer(username='test', port=port, private_key=private_key.name, public_key=public_key.name)
-        servers.append(server)
-    yield servers, (private_key.name, public_key.name)
+    server = await asyncssh.listen(
+        '',
+        port=port,
+        server_host_keys=[private_key.name],
+        authorized_client_keys=[public_key.name],
+        sftp_factory=asyncssh.SFTPServer,
+        *args,
+        **kwargs
+    )
+    yield server, private_key.name, port
+
+    server.close()
 
 
 class TestAsyncSSH:
-    '''
-    def test_create1(self):
-        mock_hub = helpers.mock_hub()
-        mock_create = create_autospec(asyncssh_tunnel.create)
-        name = ''
-        target = {}
-        print('ye')
-        mock_create(mock_hub, name, target)
-
-    def test_create2(self):
-        hub = Hub()
-        fn_hub = testing.NoContractHub(hub)
-        create_autospec(asyncssh_tunnel)
-        # asyncssh_tunnel.__init__(hub)
-    '''
-
     @pytest.mark.asyncio
-    async def test_create(self, hub: Hub, async_ssh_server_data: Tuple[List[TestingAsyncSSHServer], Tuple[str, str]]):
-        # spin up asyncssh server then connect to it; Start 10 servers on different ports
-        # Setup
-        async_ssh_servers, keys = async_ssh_server_data
+    async def test_create(self, hub: Hub, async_sftp_server_data: Tuple[TestingAsyncSFTPServer, str, int]):
+        server, private_key, port = async_sftp_server_data
+        name = 'localhost'
         hub.OPT = {'heis': {}}
         target = {
-            'client_keys': keys,
-            #'x509_trusted_certs': [''],
+            'host': 'localhost',
+            'port': port,
+            'known_hosts': None,
+            'client_keys': [private_key],
         }
-        coros = []
 
-        # Execute
-        for server in async_ssh_servers:
-            coros.append(asyncssh_tunnel.create(hub, name=f'test_server{server.port}', target=target))
-
-        # Verify
-
-        # Cleanup
-        await asyncio.gather(*coros)
+        return
+        await asyncssh_tunnel.create(hub, name=name, target=target)
+        print('created')
+        result = await hub.tunnel.asyncssh.CONS[name]['sftp'].get('taco.txt')
+        assert result
 
     @pytest.mark.asyncio
     async def test_send(self):
