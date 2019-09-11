@@ -15,6 +15,16 @@ CLI_CONFIG = {
         'default': 'salt_master',
         'help': 'The type of manager to use. The manager determines how you want to create the tunnels and if you want to deploy ephemeral agents to the remote systems',
         },
+    'checkin_time': {
+        'default': 60,
+        'type': int,
+        'help': 'The number of seconds between checking to see if the managed system needs to get an updated binary or agent restart.'
+        },
+    'dynamic_upgrade': {
+        'default': False,
+        'action': 'store_true',
+        'help': 'Tell heis to detect when new binaries are available and dynamically upgrade target systems'
+        },
     }
 CONFIG = {}
 GLOBAL = {}

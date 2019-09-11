@@ -51,13 +51,13 @@ async def create(hub, name: str, target: Dict[str, Any]):
 
     ssh_client_connection_options = {}
     # Check for each possible SSHClientConnectionOption in the target, config, then autodetect (if necessary)
-    # Skip the first argument which will always be 'self'
+    con_opts = {}
     for arg in inspect.getfullargspec(asyncssh.SSHClientConnectionOptions.prepare).args[1:]:
-        value = _get_asyncssh_opt(hub, target, arg)
-        if value is not None:
-            ssh_client_connection_options[arg] = value
+        opt = _get_asyncssh_opt(hub, target, arg)
+        if opt is not None:
+            con_opts[arg] = opt
 
-    conn = await asyncssh.connect(id_, **ssh_client_connection_options)
+    conn = await asyncssh.connect(id_, **con_opts)
     sftp = await conn.start_sftp_client()
     hub.tunnel.asyncssh.CONS[name] = {
         'con': conn,
@@ -82,7 +82,7 @@ async def get(hub, name: str, source: str, dest: str):
 
 async def cmd(hub, name: str, cmd: str):
     '''
-    Execute the given command on the machine associated witht he named connection
+    Execute the given command on the machine associated with the named connection
     '''
     con = hub.tunnel.asyncssh.CONS[name]['con']
     return await con.run(cmd)
