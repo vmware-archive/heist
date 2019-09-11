@@ -6,6 +6,7 @@ import secrets
 import asyncio
 import os
 import tempfile
+from distutils.version import StrictVersion
 from typing import Any, Dict, List
 
 CONFIG = '''master: 127.0.0.1
@@ -13,6 +14,25 @@ master_port: {master_port}
 publish_port: {publish_port}
 root_dir: {root_dir}
 '''
+
+
+def __init__(hub):
+    '''
+    Set up data structures for this module to use
+    '''
+    hub.heis.salt_master.FUTURES = {}
+
+
+async def _start_minion(hub, t_type, t_name, tgt, run_dir):
+    '''
+    Start a minion on the remote system and store the future
+    '''
+    future = asyncio.ensure_future(getattr(hub, f'tunnel.{t_type}.cmd')(
+        t_name,
+        f' {tgt} minion --config-dir {os.path.join(run_dir, "conf")} --pid-file=pfile'))
+    hub.heis.salt_master.FUTURES[t_name] = future
+    # Call an await to give the future a chance to run
+    await asyncio.sleep(0)
 
 
 async def run(hub, remotes: List[Dict[str, Any]]):
@@ -37,32 +57,78 @@ def mk_config(hub, root_dir: str):
     return path
 
 
-async def single(hub, remote: Dict[str, Any]):
+def latest(hub, name, a_dir):
     '''
-    Execute a single async connection
+    Given the artifacts directory return the latest desired artifact
     '''
-    minion = os.path.join(hub.OPT['heis']['artifacts_dir'], 'salt-minion.pex')
-    pytar = os.path.join(hub.OPT['heis']['artifacts_dir'], 'py374.txz')
-    run_dir = f'/var/tmp/heis/{secrets.token_hex()[:4]}'
+    names = []
+    paths = {}
+    for fn in os.listdir(a_dir):
+        if fn.startswith(name):
+            ver = fn[len(name)+1:]
+            names.append(ver)
+            paths[ver] = fn
+    names = sorted(names, key=StrictVersion)
+    return os.path.join(a_dir, paths[names[0]])
+
+
+async def deploy(hub, t_name, t_type, bin, run_dir):
+    '''
+    Deploy the salt minion to the remote system
+    '''
+    tgt = os.path.join(run_dir, os.path.basename(bin))
     root_dir = os.path.join(run_dir, 'root')
     config = hub.heis.salt_master.mk_config(root_dir)
-    # create tunnel
-    t_name = secrets.token_hex()
-    t_type = remote.get('tunnel', 'asyncssh')
-    await getattr(hub, f'tunnel.{t_type}.create')(t_name, remote)
 
     # run salt deployment
     await getattr(hub, f'tunnel.{t_type}.cmd')(t_name, f'mkdir -p {os.path.join(run_dir, "conf")}')
     await getattr(hub, f'tunnel.{t_type}.cmd')(t_name, f'mkdir -p {os.path.join(run_dir, "root")}')
     await getattr(hub, f'tunnel.{t_type}.send')(t_name, config, os.path.join(run_dir, 'conf', 'minion'))
-    await getattr(hub, f'tunnel.{t_type}.send')(t_name, minion, os.path.join(run_dir, 'salt-minion.pex'))
-    await getattr(hub, f'tunnel.{t_type}.send')(t_name, pytar, os.path.join(run_dir, 'py3.txz'))
-    await getattr(hub, f'tunnel.{t_type}.cmd')(t_name, f'tar -xvf {os.path.join(run_dir, "py3.txz")} -C {run_dir}')
+    await getattr(hub, f'tunnel.{t_type}.send')(t_name, bin, tgt)
+    await getattr(hub, f'tunnel.{t_type}.cmd')(t_name, f'chmod +x {tgt}')
     os.remove(config)
-    # validate deployment
+    return tgt
+
+
+async def update(hub, t_name, t_type, bin, tgt, run_dir):
+    '''
+    Re-deploy the latest minion to the remote system
+    '''
+    await hub.heis.salt_master.clean(t_name, t_type, run_dir)
+    await hub.heis.salt_master.deploy(t_name, t_type, bin, run_dir)
+    await _start_minion(t_type, t_name, tgt, run_dir)
+
+
+async def clean(hub, t_name, t_type, run_dir):
+    pfile = os.path.join(run_dir, 'pfile')
+    await getattr(hub, f'tunnel.{t_type}.cmd')(t_name, f'kill `cat {pfile}`')
+    await getattr(hub, f'tunnel.{t_type}.cmd')(t_name, f'rm -rf {run_dir}')
+    await hub.heis.salt_master.FUTURES[t_name]
+
+
+async def single(hub, remote: Dict[str, Any]):
+    '''
+    Execute a single async connection
+    '''
+    # create tunnel
+    t_name = secrets.token_hex()
+    run_dir = f'/var/tmp/heis/{secrets.token_hex()[:4]}'
+    t_type = remote.get('tunnel', 'asyncssh')
+    await getattr(hub, f'tunnel.{t_type}.create')(t_name, remote)
+    # Deploy
+    bin = hub.heis.salt_master.latest('salt', hub.OPT['heis']['artifacts_dir'])
+    tgt = await hub.heis.salt_master.deploy(t_name, t_type, bin, run_dir)
     # Create tunnel back to master
     await getattr(hub, f'tunnel.{t_type}.tunnel')(t_name, 44505, 4505)
     await getattr(hub, f'tunnel.{t_type}.tunnel')(t_name, 44506, 4506)
     # Start minion
-    await getattr(hub, f'tunnel.{t_type}.cmd')(
-        t_name, f'{os.path.join(run_dir, "py3", "bin", "python3")} {os.path.join(run_dir, "salt-minion.pex")} --config-dir {os.path.join(run_dir, "conf")}')
+    await _start_minion(hub, t_type, t_name, tgt, run_dir)
+    while True:
+        try:
+            await asyncio.sleep(hub.OPT['heis']['checkin_time'])
+            if hub.OPT['heis']['dynamic_upgrade']:
+                latest = hub.heis.salt_master.latest('salt', hub.OPT['heis']['artifacts_dir'])
+                if latest != bin:
+                    await hub.heis.salt_master.update(t_name, t_type, latest, tgt, run_dir)
+        except KeyboardInterrupt():
+            await hub.heis.salt_master.clean(t_name, run_dir)

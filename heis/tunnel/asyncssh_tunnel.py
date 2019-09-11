@@ -46,17 +46,20 @@ async def create(hub, name: str, target: Dict[str, Any]):
     :param name:
     :param target:
     '''
+    print(target)
     # The id MUST be in the target, everything else might be in the target, conf, or elsewhere
     id_ = target.get('host', target.get('id'))
 
     # Check for each possible SSHClientConnectionOption in the target, config, then autodetect (if necessary)
-    ssh_client_connection_options = {
-        arg: _get_asyncssh_opt(hub, target, arg) for arg in
-        # Skip the first argument which will always be 'self'
-        inspect.getfullargspec(asyncssh.SSHClientConnectionOptions.prepare).args[1:]
-    }
+    con_opts = {}
+    for arg in inspect.getfullargspec(asyncssh.SSHClientConnectionOptions.prepare).args[1:]:
+        opt = _get_asyncssh_opt(hub, target, arg)
+        if opt is None:
+            continue
+        con_opts[arg] = opt
+    print(con_opts)
 
-    conn = await asyncssh.connect(id_, **ssh_client_connection_options)
+    conn = await asyncssh.connect(id_, **con_opts)
     sftp = await conn.start_sftp_client()
     hub.tunnel.asyncssh.CONS[name] = {
         'con': conn,
@@ -81,7 +84,7 @@ async def get(hub, name: str, source: str, dest: str):
 
 async def cmd(hub, name: str, cmd: str):
     '''
-    Execute the given command on the machine associated witht he named connection
+    Execute the given command on the machine associated with the named connection
     '''
     con = hub.tunnel.asyncssh.CONS[name]['con']
     return await con.run(cmd)
