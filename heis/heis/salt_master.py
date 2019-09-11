@@ -27,9 +27,10 @@ async def _start_minion(hub, t_type, t_name, tgt, run_dir):
     '''
     Start a minion on the remote system and store the future
     '''
+    pfile = os.path.join(run_dir, 'pfile')
     future = asyncio.ensure_future(getattr(hub, f'tunnel.{t_type}.cmd')(
         t_name,
-        f' {tgt} minion --config-dir {os.path.join(run_dir, "conf")} --pid-file=pfile'))
+        f' {tgt} minion --config-dir {os.path.join(run_dir, "conf")} --pid-file={pfile}'))
     hub.heis.salt_master.FUTURES[t_name] = future
     # Call an await to give the future a chance to run
     await asyncio.sleep(0)
