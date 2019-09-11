@@ -58,7 +58,7 @@ def mk_config(hub, root_dir: str):
     return path
 
 
-def latest(hub, name, a_dir):
+def latest(hub, name: str, a_dir: str):
     '''
     Given the artifacts directory return the latest desired artifact
     '''
@@ -125,11 +125,8 @@ async def single(hub, remote: Dict[str, Any]):
     # Start minion
     await _start_minion(hub, t_type, t_name, tgt, run_dir)
     while True:
-        try:
-            await asyncio.sleep(hub.OPT['heis']['checkin_time'])
-            if hub.OPT['heis']['dynamic_upgrade']:
-                latest = hub.heis.salt_master.latest('salt', hub.OPT['heis']['artifacts_dir'])
-                if latest != bin:
-                    await hub.heis.salt_master.update(t_name, t_type, latest, tgt, run_dir)
-        except KeyboardInterrupt():
-            await hub.heis.salt_master.clean(t_name, run_dir)
+        await asyncio.sleep(hub.OPT['heis']['checkin_time'])
+        if hub.OPT['heis']['dynamic_upgrade']:
+            latest = hub.heis.salt_master.latest('salt', hub.OPT['heis']['artifacts_dir'])
+            if latest != bin:
+                await hub.heis.salt_master.update(t_name, t_type, latest, tgt, run_dir)

@@ -46,7 +46,6 @@ async def create(hub, name: str, target: Dict[str, Any]):
     :param name:
     :param target:
     '''
-    print(target)
     # The id MUST be in the target, everything else might be in the target, conf, or elsewhere
     id_ = target.get('host', target.get('id'))
 
