@@ -1,12 +1,11 @@
 #!/usr/bin/python3
 # Import Python libs
-import asyncio
+from asyncio import AbstractServer as Server
 import tempfile
 from typing import Tuple
 
 # Import local libs
 import heis.tunnel.asyncssh_tunnel as asyncssh_tunnel
-from tests.helpers.asyncssh_server import TestingAsyncSFTPServer
 
 # Import 3rd-party libs
 import asyncssh
@@ -23,7 +22,7 @@ def hub():
 
 
 @pytest.fixture
-async def async_sftp_server_data(port: int = 5050, *args, **kwargs) -> TestingAsyncSFTPServer:
+async def async_sftp_server_data(port: int = 5050, *args, **kwargs) -> Tuple[Server, str, str]:
     private_key = tempfile.NamedTemporaryFile(prefix='id_rsa_')
     public_key = tempfile.NamedTemporaryFile(prefix='id_rsa_', suffix='.pub')
     key = RSA.gen_key(1024, 65537)
@@ -46,7 +45,7 @@ async def async_sftp_server_data(port: int = 5050, *args, **kwargs) -> TestingAs
 
 class TestAsyncSSH:
     @pytest.mark.asyncio
-    async def test_create(self, hub: Hub, async_sftp_server_data: Tuple[TestingAsyncSFTPServer, str, int]):
+    async def test_create(self, hub: Hub, async_sftp_server_data: Tuple[Server, str, int]):
         server, private_key, port = async_sftp_server_data
         name = 'localhost'
         hub.OPT = {'heis': {}}
