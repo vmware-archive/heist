@@ -27,9 +27,10 @@ async def _start_minion(hub, t_type, t_name, tgt, run_dir):
     '''
     Start a minion on the remote system and store the future
     '''
+    pfile = os.path.join(run_dir, 'pfile')
     future = asyncio.ensure_future(getattr(hub, f'tunnel.{t_type}.cmd')(
         t_name,
-        f' {tgt} minion --config-dir {os.path.join(run_dir, "conf")} --pid-file=pfile'))
+        f' {tgt} minion --config-dir {os.path.join(run_dir, "conf")} --pid-file={pfile}'))
     hub.heis.salt_master.FUTURES[t_name] = future
     # Call an await to give the future a chance to run
     await asyncio.sleep(0)
@@ -57,7 +58,7 @@ def mk_config(hub, root_dir: str):
     return path
 
 
-def latest(hub, name, a_dir):
+def latest(hub, name: str, a_dir: str):
     '''
     Given the artifacts directory return the latest desired artifact
     '''
@@ -94,12 +95,15 @@ async def update(hub, t_name, t_type, bin, tgt, run_dir):
     '''
     Re-deploy the latest minion to the remote system
     '''
-    await hub.heis.salt_master.clean(t_name, t_type, run_dir)
+    # TODO: When updating clean out the old deployment
+    #await hub.heis.salt_master.clean(t_name, t_type, run_dir)
     await hub.heis.salt_master.deploy(t_name, t_type, bin, run_dir)
     await _start_minion(t_type, t_name, tgt, run_dir)
 
 
-async def clean(hub, t_name, t_type, run_dir):
+async def clean(hub, t_name):
+    run_dir = hub.heis.CONS[t_name]['run_dir']
+    t_type = hub.heis.CONS[t_name]['t_type']
     pfile = os.path.join(run_dir, 'pfile')
     await getattr(hub, f'tunnel.{t_type}.cmd')(t_name, f'kill `cat {pfile}`')
     await getattr(hub, f'tunnel.{t_type}.cmd')(t_name, f'rm -rf {run_dir}')
@@ -118,17 +122,20 @@ async def single(hub, remote: Dict[str, Any]):
     # Deploy
     bin = hub.heis.salt_master.latest('salt', hub.OPT['heis']['artifacts_dir'])
     tgt = await hub.heis.salt_master.deploy(t_name, t_type, bin, run_dir)
+    hub.heis.CONS[t_name] = {
+        'run_dir': run_dir,
+        't_type': t_type,
+        'manager': 'salt_master',
+        'bin': bin,
+        'tgt': tgt}
     # Create tunnel back to master
     await getattr(hub, f'tunnel.{t_type}.tunnel')(t_name, 44505, 4505)
     await getattr(hub, f'tunnel.{t_type}.tunnel')(t_name, 44506, 4506)
     # Start minion
     await _start_minion(hub, t_type, t_name, tgt, run_dir)
     while True:
-        try:
-            await asyncio.sleep(hub.OPT['heis']['checkin_time'])
-            if hub.OPT['heis']['dynamic_upgrade']:
-                latest = hub.heis.salt_master.latest('salt', hub.OPT['heis']['artifacts_dir'])
-                if latest != bin:
-                    await hub.heis.salt_master.update(t_name, t_type, latest, tgt, run_dir)
-        except KeyboardInterrupt():
-            await hub.heis.salt_master.clean(t_name, run_dir)
+        await asyncio.sleep(hub.OPT['heis']['checkin_time'])
+        if hub.OPT['heis']['dynamic_upgrade']:
+            latest = hub.heis.salt_master.latest('salt', hub.OPT['heis']['artifacts_dir'])
+            if latest != bin:
+                await hub.heis.salt_master.update(t_name, t_type, latest, tgt, run_dir)

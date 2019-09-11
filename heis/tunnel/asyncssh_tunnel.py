@@ -55,7 +55,7 @@ async def create(hub, name: str, target: Dict[str, Any]):
     # Add connection options that aren't specified in `SSHClientConnectionOptions.prepare`
     possible_options.update({'port', 'loop', 'tunnel', 'family', 'flags', 'local_addr', 'options'})
     # Check for each possible SSHClientConnectionOption in the target, config, then autodetect (if necessary)
-    con_opts = {}
+    con_opts = {'known_hosts': None}
     for arg in possible_options:
         opt = _get_asyncssh_opt(hub, target, arg)
         if opt is not None:
@@ -98,3 +98,12 @@ async def tunnel(hub, name: str, remote: str, local: str):
     '''
     con = hub.tunnel.asyncssh.CONS[name]['con']
     listener = await con.forward_remote_port('', remote, 'localhost', local)
+
+
+async def destroy(hub, name:str):
+    '''
+    Destroy the named connection
+    '''
+    con = hub.tunnel.asyncssh.CONS[name]['con']
+    con.close()
+    await con.wait_closed()
