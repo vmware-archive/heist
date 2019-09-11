@@ -1,9 +1,12 @@
 #!/usr/bin/python3
+# Import local libs
 import heis.heis.init
+import tests.helpers.mock_hub as helpers
+
+# import 3rd-party libs
 import mock
 import pop.utils.testing as testing
 import pytest
-import tests.unit.helpers.mock_hub as helpers
 
 
 @pytest.fixture
@@ -16,6 +19,7 @@ class TestSaltMaster:
     def test_load_subs(self):
         mock_hub = helpers.mock_hub()
         heis.heis.init.load_subs(mock_hub)
+        mock_hub.pop.sub.add.assert_any_call(dyne_name='rend')
         mock_hub.pop.sub.add.assert_any_call(dyne_name='roster')
         mock_hub.pop.sub.add.assert_any_call(dyne_name='tunnel')
 

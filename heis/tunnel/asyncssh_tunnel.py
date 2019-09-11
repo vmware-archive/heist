@@ -49,12 +49,13 @@ async def create(hub, name: str, target: Dict[str, Any]):
     # The id MUST be in the target, everything else might be in the target, conf, or elsewhere
     id_ = target.get('host', target.get('id'))
 
+    ssh_client_connection_options = {}
     # Check for each possible SSHClientConnectionOption in the target, config, then autodetect (if necessary)
-    ssh_client_connection_options = {
-        arg: _get_asyncssh_opt(hub, target, arg) for arg in
-        # Skip the first argument which will always be 'self'
-        inspect.getfullargspec(asyncssh.SSHClientConnectionOptions.prepare).args[1:]
-    }
+    # Skip the first argument which will always be 'self'
+    for arg in inspect.getfullargspec(asyncssh.SSHClientConnectionOptions.prepare).args[1:]:
+        value = _get_asyncssh_opt(hub, target, arg)
+        if value is not None:
+            ssh_client_connection_options[arg] = value
 
     conn = await asyncssh.connect(id_, **ssh_client_connection_options)
     sftp = await conn.start_sftp_client()
