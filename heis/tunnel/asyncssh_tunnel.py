@@ -57,7 +57,8 @@ async def create(hub, name: str, target: Dict[str, Any]):
         if opt is None:
             continue
         con_opts[arg] = opt
-    print(con_opts)
+    if 'known_hosts' not in con_opts:
+        con_opts['known_hosts'] = None
 
     conn = await asyncssh.connect(id_, **con_opts)
     sftp = await conn.start_sftp_client()
