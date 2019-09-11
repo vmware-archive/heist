@@ -95,12 +95,15 @@ async def update(hub, t_name, t_type, bin, tgt, run_dir):
     '''
     Re-deploy the latest minion to the remote system
     '''
-    await hub.heis.salt_master.clean(t_name, t_type, run_dir)
+    # TODO: When updating clean out the old deployment
+    #await hub.heis.salt_master.clean(t_name, t_type, run_dir)
     await hub.heis.salt_master.deploy(t_name, t_type, bin, run_dir)
     await _start_minion(t_type, t_name, tgt, run_dir)
 
 
-async def clean(hub, t_name, t_type, run_dir):
+async def clean(hub, t_name):
+    run_dir = hub.heis.CONS[t_name]['run_dir']
+    t_type = hub.heis.CONS[t_name]['t_type']
     pfile = os.path.join(run_dir, 'pfile')
     await getattr(hub, f'tunnel.{t_type}.cmd')(t_name, f'kill `cat {pfile}`')
     await getattr(hub, f'tunnel.{t_type}.cmd')(t_name, f'rm -rf {run_dir}')
@@ -119,6 +122,12 @@ async def single(hub, remote: Dict[str, Any]):
     # Deploy
     bin = hub.heis.salt_master.latest('salt', hub.OPT['heis']['artifacts_dir'])
     tgt = await hub.heis.salt_master.deploy(t_name, t_type, bin, run_dir)
+    hub.heis.CONS[t_name] = {
+        'run_dir': run_dir,
+        't_type': t_type,
+        'manager': 'salt_master',
+        'bin': bin,
+        'tgt': tgt}
     # Create tunnel back to master
     await getattr(hub, f'tunnel.{t_type}.tunnel')(t_name, 44505, 4505)
     await getattr(hub, f'tunnel.{t_type}.tunnel')(t_name, 44506, 4506)
