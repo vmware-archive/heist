@@ -29,7 +29,10 @@ def start(hub):
     '''
     Start the async loop and get the process rolling
     '''
-    hub.pop.loop.start(hub.heis.init.run(), sigint=hub.heis.init.clean)
+    hub.pop.loop.start(
+        hub.heis.init.run(),
+        sigint=hub.heis.init.clean,
+        sigterm=hub.heis.init.clean)
 
 
 async def run(hub):
@@ -57,5 +60,6 @@ async def clean(hub, signal):
     tasks = [t for t in asyncio.all_tasks() if t is not
              asyncio.current_task()]
     for task in tasks:
-        print(task)
+        # TODO: There are left over tasks that we should be able
+        # to better clean
         task.cancel()
