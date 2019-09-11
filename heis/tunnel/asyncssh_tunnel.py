@@ -96,3 +96,12 @@ async def tunnel(hub, name: str, remote: str, local: str):
     '''
     con = hub.tunnel.asyncssh.CONS[name]['con']
     listener = await con.forward_remote_port('', remote, 'localhost', local)
+
+
+async def destroy(hub, name:str):
+    '''
+    Destroy the named connection
+    '''
+    con = hub.tunnel.asyncssh.CONS[name]['con']
+    con.close()
+    await con.wait_closed()
