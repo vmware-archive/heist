@@ -4,6 +4,7 @@ import os
 import sys
 import subprocess
 import tempfile
+import time
 from typing import Tuple
 
 # Import local libs
@@ -17,7 +18,6 @@ from pop.hub import Hub
 from M2Crypto import RSA
 
 
-@pytest.fixture
 def ssh_keypair() -> Tuple[str, str]:
     private_key = tempfile.NamedTemporaryFile(prefix='id_rsa_')
     public_key = tempfile.NamedTemporaryFile(prefix='id_rsa_', suffix='.pub')
@@ -26,7 +26,25 @@ def ssh_keypair() -> Tuple[str, str]:
     key.save_pub_key(public_key.name)
     os.chmod(private_key.name, 400)
     os.chmod(public_key.name, 400)
-    yield private_key.name, public_key.name
+    return os.path.expanduser('~/.ssh/id_rsa'), os.path.expanduser('~/.ssh/id_rsa.pub')
+    # TODO This should be using these automatically created keys, not the exiting user keys
+    return private_key.name, public_key.name
+
+
+def spawn_server(port: int, **kwargs) -> subprocess.Popen:
+    server_cmd = [
+                     sys.executable,
+                     sftp_server.__file__,
+                     f'--port={port}',
+                 ] + [f'--{key.replace("_", "-")}={value}' for key, value in kwargs.items()]
+    print(' '.join(server_cmd))
+    process = subprocess.Popen(server_cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+    # Allow the server to start up
+    # TODO get a message from the server that it is started instead of sleeping
+    time.sleep(1)
+    # Verify that it started properly
+    assert not process.poll(), b'\n'.join(process.stderr.readlines())
+    return process
 
 
 @pytest.fixture
@@ -39,51 +57,45 @@ def hub():
 
 
 @pytest.fixture
-def sftp_root():
-    # TODO create a temporary directory with a bunch of files in it
-    yield '/tmp/sftp/heis'
+def sftp_root() -> str:
+    temp_dir = tempfile.TemporaryDirectory(prefix='heis_asyncssh_', suffix='_test_data')
+    # TODO create files in the root
+    yield temp_dir.name
 
 
-def spawn_server(port: int, **kwargs) -> subprocess.Popen:
-    return subprocess.Popen(
-        [
-            sftp_server.__file__,
-            f'--port={port}',
-        ] + [f'--{key}={value}' for key, value in kwargs.items()]
+@pytest.fixture(scope='function')
+def basic_sftp_server() -> Tuple[subprocess.Popen, int, str]:
+    private_key, public_key = ssh_keypair()
+    port = 8039
+    server = spawn_server(
+        port=port,
+        authorized_client_keys=public_key,
+        server_host_keys=private_key,
     )
+    yield server, port, private_key
+    server.kill()
 
 
 class TestAsyncSSH:
     @pytest.mark.asyncio
-    async def test_create(self, hub: Hub, ssh_keypair: Tuple[str, str], sftp_root: str):
+    async def test_create(self, hub: Hub, basic_sftp_server: Tuple[subprocess.Popen, int, str]):
         # Setup
-        private_key, public_key = ssh_keypair
-        port = 8022
+        server, port, private_key = basic_sftp_server
         name = 'localhost'
         hub.OPT = {'heis': {}}
         target = {
             'host': 'localhost',
             'port': port,
             'known_hosts': None,
-            # 'client_keys': [private_key],
-            'client_keys': [os.path.expanduser('~/.ssh/id_rsa')],
+            'client_keys': [private_key],
         }
 
         # Execute
-        server = spawn_server(port=port,
-                              authorized_client_keys=public_key,
-                              server_host_keys=private_key,
-                              sftp_root=sftp_root
-                              )
-        print('created server')
         await asyncssh_tunnel.create(hub, name=name, target=target)
-        print('\n' + '*' * 100)
 
-        # verify
-        await hub.tunnel.asyncssh.CONS['localhost']['sftp'].get('taco.txt')
-
-        # Cleanup
-        server.kill()
+        # Verify
+        assert hub.tunnel.asyncssh.CONS[name].get('con')
+        assert hub.tunnel.asyncssh.CONS[name].get('sftp')
 
     @pytest.mark.asyncio
     async def test_send(self):
@@ -92,6 +104,7 @@ class TestAsyncSSH:
     @pytest.mark.asyncio
     async def test_get(self):
         ...
+        # await hub.tunnel.asyncssh.CONS['localhost']['sftp'].get('taco.txt')
 
     @pytest.mark.asyncio
     async def test_cmd(self):

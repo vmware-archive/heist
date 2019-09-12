@@ -1,7 +1,9 @@
 #!/usr/bin/python3
+import argparse
 import asyncio
 import asyncssh
-from typing import Set
+import inspect
+from typing import Dict, Tuple
 
 
 async def start_async_sftp_server(authorized_client_keys: str,
@@ -11,57 +13,55 @@ async def start_async_sftp_server(authorized_client_keys: str,
                                   **kwargs):
     await asyncssh.listen('',
                           port=port,
-                          authorized_client_keys=[authorized_client_keys],
+                          authorized_client_keys=authorized_client_keys,
                           server_host_keys=[server_host_keys],
                           sftp_factory=sftp_factory,
-                          **kwargs)
+                          **kwargs,)
 
 
-def asyncssh_options() -> Set[str]:
+def parse_args() -> Tuple[argparse.Namespace, Dict[str, str or int]]:
+    # Get arguments from async ssh server options
     possible_options = set(inspect.getfullargspec(asyncssh.SSHServerConnectionOptions.prepare).args)
     possible_options.update(set(inspect.getfullargspec(asyncssh.listen).args))
     # Remove options from `inspect` that don't belong
-    possible_options -= {'self', 'args', 'kwargs'}
-    # Add connection options that aren't specified in `SSHClientConnectionOptions.prepare`
-    return possible_options
+    possible_options -= {'self', 'args', 'kwargs', 'error_handler'}
 
-
-if __name__ == '__main__':
-    import argparse
-    import inspect
-    import sys
-
+    # Setup argument parser
     parser = argparse.ArgumentParser(description='Spawn an asyncssh server for testing Heis')
-    parser.add_argument('--sftp_root', type=str)
-    for option in asyncssh_options():
-        parser.add_argument(f'--{option}', type=str)
-    args = parser.parse_args()
-    opts = {}
-    for key, value in args.__dict__.items():
+    parser.add_argument('--sftp-root', type=str)
+    for option in possible_options:
+        parser.add_argument(f'--{option.replace("_", "-")}', type=str)
+    cmdline_args = parser.parse_args()
+
+    # Get all the SSHServerConnectionOptions that were set
+    async_ssh_server_options = {}
+    for key, value in cmdline_args.__dict__.items():
         if key in ('sftp_root',):
             continue
         if value:
-            opts[key] = value
+            if value.isnumeric():
+                async_ssh_server_options[key] = int(value)
+            else:
+                async_ssh_server_options[key] = value
 
+    return cmdline_args, async_ssh_server_options
+
+
+if __name__ == '__main__':
+    args, opts = parse_args()
 
     class SimpleSFTPServer(asyncssh.SFTPServer):
         def __init__(self, conn):
             super().__init__(conn, chroot=args.sftp_root)
 
-    print(args)
 
     loop = asyncio.get_event_loop()
-    try:
-        loop.run_until_complete(start_async_sftp_server(
-            sftp_factory=SimpleSFTPServer if args.sftp_root else True,
-            **opts
-        ))
-    except (OSError, asyncssh.Error) as exc:
-        sys.exit('Error starting server: ' + str(exc))
-
+    loop.run_until_complete(start_async_sftp_server(
+        sftp_factory=SimpleSFTPServer if args.sftp_root else True, **opts
+    ))
+    print('started')
     try:
         loop.run_forever()
-        # Create a pid_file and except on it not existing anymore
     except KeyboardInterrupt:
         print('stopping gracefully')
         loop.stop()
