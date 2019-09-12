@@ -51,7 +51,7 @@ async def create(hub, name: str, target: Dict[str, Any]):
 
     possible_options = set(inspect.getfullargspec(asyncssh.SSHClientConnectionOptions.prepare).args)
     # Remove options from `inspect` that don't belong
-    possible_options -= {'self', 'arg', 'kwarg'}
+    possible_options -= {'self', 'args', 'kwargs'}
     # Add connection options that aren't specified in `SSHClientConnectionOptions.prepare`
     possible_options.update({'port', 'loop', 'tunnel', 'family', 'flags', 'local_addr', 'options'})
     # Check for each possible SSHClientConnectionOption in the target, config, then autodetect (if necessary)
