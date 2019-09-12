@@ -70,7 +70,7 @@ def latest(hub, name: str, a_dir: str):
             names.append(ver)
             paths[ver] = fn
     names = sorted(names, key=StrictVersion)
-    return os.path.join(a_dir, paths[names[0]])
+    return os.path.join(a_dir, paths[names[-1]])
 
 
 async def deploy(hub, t_name, t_type, bin, run_dir):
@@ -96,9 +96,10 @@ async def update(hub, t_name, t_type, bin, tgt, run_dir):
     Re-deploy the latest minion to the remote system
     '''
     # TODO: When updating clean out the old deployment
-    #await hub.heis.salt_master.clean(t_name, t_type, run_dir)
-    await hub.heis.salt_master.deploy(t_name, t_type, bin, run_dir)
-    await _start_minion(t_type, t_name, tgt, run_dir)
+    await hub.heis.salt_master.clean(t_name)
+    tgt = await hub.heis.salt_master.deploy(t_name, t_type, bin, run_dir)
+    hub.heis.CONS[t_name]['tgt'] = tgt
+    await _start_minion(hub, t_type, t_name, tgt, run_dir)
 
 
 async def clean(hub, t_name):
@@ -138,4 +139,5 @@ async def single(hub, remote: Dict[str, Any]):
         if hub.OPT['heis']['dynamic_upgrade']:
             latest = hub.heis.salt_master.latest('salt', hub.OPT['heis']['artifacts_dir'])
             if latest != bin:
+                bin = latest
                 await hub.heis.salt_master.update(t_name, t_type, latest, tgt, run_dir)
