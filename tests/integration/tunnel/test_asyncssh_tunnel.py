@@ -5,6 +5,7 @@ import sys
 import subprocess
 import tempfile
 import time
+import uuid
 from typing import Tuple
 
 # Import local libs
@@ -15,39 +16,44 @@ import heis.tunnel.asyncssh_tunnel as asyncssh_tunnel
 import mock
 import pytest
 from pop.hub import Hub
-from M2Crypto import RSA
 
 
 def ssh_keypair() -> Tuple[str, str]:
-    private_key = tempfile.NamedTemporaryFile(prefix='id_rsa_')
-    public_key = tempfile.NamedTemporaryFile(prefix='id_rsa_', suffix='.pub')
-    key = RSA.gen_key(1024, 65537)
-    key.save_key(private_key.name, cipher=None)
-    key.save_pub_key(public_key.name)
-    os.chmod(private_key.name, 400)
-    os.chmod(public_key.name, 400)
-    return os.path.expanduser('~/.ssh/id_rsa'), os.path.expanduser('~/.ssh/id_rsa.pub')
-    # TODO This should be using these automatically created keys, not the exiting user keys
-    return private_key.name, public_key.name
+    # Get the static ssh keys from the helpers directory
+    helpers_dir = os.path.dirname(sftp_server.__file__)
+    return os.path.join(helpers_dir, 'id_rsa_testing'), os.path.join(helpers_dir, 'id_rsa_testing.pub')
 
 
-def spawn_server(port: int, **kwargs) -> subprocess.Popen:
+def spawn_server(port: int, pid_file: str, **kwargs) -> subprocess.Popen:
     server_cmd = [
                      sys.executable,
                      sftp_server.__file__,
                      f'--port={port}',
+                     f'--pid-file={pid_file}',
                  ] + [f'--{key.replace("_", "-")}={value}' for key, value in kwargs.items()]
     print(' '.join(server_cmd))
     process = subprocess.Popen(server_cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
-    # Allow the server to start up
-    # TODO get a message from the server that it is started instead of sleeping
-    time.sleep(1)
+
+    # Allow the server time to start up
+    for _ in range(100):
+        if os.path.exists(pid_file) or (process.poll() is not None):
+            # At this point either the server is running or crashed because of the args you gave it
+            break
+        else:
+            time.sleep(.1)
+
     # Verify that it started properly
     assert not process.poll(), b'\n'.join(process.stderr.readlines())
     return process
 
 
-@pytest.fixture
+def sftp_root() -> tempfile.TemporaryDirectory:
+    temp_dir = tempfile.TemporaryDirectory(prefix='heis_asyncssh_', suffix='_test_data')
+    # TODO create files in the root
+    return temp_dir
+
+
+@pytest.fixture(scope='function')
 def hub():
     hub = Hub()
     with mock.patch.object(sys, 'argv', sys.argv[:1]):
@@ -56,21 +62,17 @@ def hub():
     return hub
 
 
-@pytest.fixture
-def sftp_root() -> str:
-    temp_dir = tempfile.TemporaryDirectory(prefix='heis_asyncssh_', suffix='_test_data')
-    # TODO create files in the root
-    yield temp_dir.name
-
-
 @pytest.fixture(scope='function')
 def basic_sftp_server() -> Tuple[subprocess.Popen, int, str]:
+    # Generate a unique pid_file name, but do not create the file
+    pid_file = os.path.join(tempfile.gettempdir(), f'asyncssh_test_{str(uuid.uuid4())[:8]}.pid')
     private_key, public_key = ssh_keypair()
     port = 8039
     server = spawn_server(
         port=port,
         authorized_client_keys=public_key,
         server_host_keys=private_key,
+        pid_file=pid_file,
     )
     yield server, port, private_key
     server.kill()

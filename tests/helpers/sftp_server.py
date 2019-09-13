@@ -3,6 +3,9 @@ import argparse
 import asyncio
 import asyncssh
 import inspect
+import os
+import pidfile
+import tempfile
 from typing import Dict, Tuple
 
 
@@ -29,6 +32,7 @@ def parse_args() -> Tuple[argparse.Namespace, Dict[str, str or int]]:
     # Setup argument parser
     parser = argparse.ArgumentParser(description='Spawn an asyncssh server for testing Heis')
     parser.add_argument('--sftp-root', type=str)
+    parser.add_argument('--pid-file', type=str, default=os.path.join(tempfile.gettempdir(), 'async_sftp_server.pid'))
     for option in possible_options:
         parser.add_argument(f'--{option.replace("_", "-")}', type=str)
     cmdline_args = parser.parse_args()
@@ -36,7 +40,7 @@ def parse_args() -> Tuple[argparse.Namespace, Dict[str, str or int]]:
     # Get all the SSHServerConnectionOptions that were set
     async_ssh_server_options = {}
     for key, value in cmdline_args.__dict__.items():
-        if key in ('sftp_root',):
+        if key in ('sftp_root', 'pid_file'):
             continue
         if value:
             if value.isnumeric():
@@ -56,12 +60,13 @@ if __name__ == '__main__':
 
 
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(start_async_sftp_server(
-        sftp_factory=SimpleSFTPServer if args.sftp_root else True, **opts
-    ))
-    print('started')
-    try:
-        loop.run_forever()
-    except KeyboardInterrupt:
-        print('stopping gracefully')
-        loop.stop()
+
+    with pidfile.PidFile(args.pid_file):
+        loop.run_until_complete(start_async_sftp_server(
+            sftp_factory=SimpleSFTPServer if args.sftp_root else True, **opts
+        ))
+
+        try:
+            loop.run_forever()
+        except KeyboardInterrupt:
+            loop.stop()
