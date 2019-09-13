@@ -5,6 +5,7 @@ import asyncssh
 import inspect
 import os
 import pidfile
+import signal
 import tempfile
 from typing import Dict, Tuple
 
@@ -66,6 +67,9 @@ if __name__ == '__main__':
             sftp_factory=SimpleSFTPServer if args.sftp_root else True, **opts
         ))
 
+        # Cleanup properly when terminated
+        signal.signal(signal.SIGINT, loop.stop)
+        signal.signal(signal.SIGTERM, loop.stop)
         try:
             loop.run_forever()
         except KeyboardInterrupt:
