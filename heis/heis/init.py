@@ -46,18 +46,19 @@ async def run(hub):
     await getattr(hub, f'heis.{manager}.run')(remotes)
 
 
-async def clean(hub, signal):
+async def clean(hub, signal: int = None):
     '''
     Clean up the connections
     '''
-    log.warning(f'Got signal {signal}! Cleaning up connections')
+    if signal:
+        log.warning(f'Got signal {signal}! Cleaning up connections')
     coros = []
     # First clean up the remote systems
     for t_name, vals in hub.heis.CONS.items():
         manager = vals['manager']
         coros.append(getattr(hub, f'heis.{manager}.clean')(t_name))
     await asyncio.gather(*coros)
-    # Then shut down conenctions
+    # Then shut down connections
     coros = []
     for t_name, vals in hub.heis.CONS.items():
         t_type = vals['t_type']
@@ -66,5 +67,5 @@ async def clean(hub, signal):
     tasks = [t for t in asyncio.all_tasks() if t is not
              asyncio.current_task()]
     for task in tasks:
-        log.warning('Task remains that were not cleaned up, shuting down violently')
+        log.warning('Task remains that were not cleaned up, shutting down violently')
         task.cancel()
