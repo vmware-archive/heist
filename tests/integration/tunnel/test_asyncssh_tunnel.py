@@ -101,14 +101,14 @@ def structured_sftp_server() -> Tuple[int, str]:
     # Generate a unique pid_file name, but do not create the file
     pid_file = os.path.join(tempfile.gettempdir(), f'asyncssh_test_{str(uuid.uuid4())[:8]}.pid')
     private_key, public_key = ssh_keypair()
-    root = sftp_root().name
+    root = sftp_root()
     port = 8040
     server = spawn_server(
         port=port,
         authorized_client_keys=public_key,
         server_host_keys=private_key,
         pid_file=pid_file,
-        sftp_root=root,
+        sftp_root=root.name,
     )
     yield port, private_key
     server.kill()
@@ -143,7 +143,6 @@ class TestAsyncSSH:
     @pytest.mark.asyncio
     async def test_get(self, hub: Hub, structured_sftp_server: Tuple[int, str], temp_dir):
         # Setup
-        return
         port, private_key = structured_sftp_server
         name = 'localhost'
         source_file = 'example.text'
@@ -157,10 +156,10 @@ class TestAsyncSSH:
 
         # Execute
         await asyncssh_tunnel.create(hub, name=name, target=target)
+        await asyncssh_tunnel.get(hub, name, source_file, destination)
 
         # Verify
-        await asyncssh_tunnel.get(hub, name, source_file, destination)
-#        await hub.tunnel.asyncssh.CONS[name]['sftp'].get('taco.txt')
+        assert os.path.exists(destination)
 
     @pytest.mark.asyncio
     async def test_cmd(self):
