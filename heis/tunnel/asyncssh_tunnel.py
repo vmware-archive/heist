@@ -84,12 +84,12 @@ async def get(hub, name: str, source: str, dest: str):
     await sftp.get(source, dest)
 
 
-async def cmd(hub, name: str, cmd: str):
+async def cmd(hub, name: str, command: str):
     '''
     Execute the given command on the machine associated with the named connection
     '''
     con = hub.tunnel.asyncssh.CONS[name]['con']
-    return await con.run(cmd)
+    return await con.run(command)
 
 
 async def tunnel(hub, name: str, remote: str, local: str):
@@ -100,7 +100,7 @@ async def tunnel(hub, name: str, remote: str, local: str):
     listener = await con.forward_remote_port('', remote, 'localhost', local)
 
 
-async def destroy(hub, name:str):
+async def destroy(hub, name: str):
     '''
     Destroy the named connection
     '''

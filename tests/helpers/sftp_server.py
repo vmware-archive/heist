@@ -15,6 +15,8 @@ async def start_async_sftp_server(authorized_client_keys: str,
                                   server_host_keys: str,
                                   sftp_factory: bool or asyncssh.SFTPServer = True,
                                   **kwargs):
+    # Start the sftp server
+    # Based off of examples at https://github.com/ronf/asyncssh/tree/master/examples
     await asyncssh.listen('',
                           port=port,
                           authorized_client_keys=authorized_client_keys,
@@ -62,15 +64,16 @@ if __name__ == '__main__':
 
     loop = asyncio.get_event_loop()
 
-    with pidfile.PidFile(args.pid_file):
-        loop.run_until_complete(start_async_sftp_server(
-            sftp_factory=SimpleSFTPServer if args.sftp_root else True, **opts
-        ))
+    loop.run_until_complete(start_async_sftp_server(
+        sftp_factory=SimpleSFTPServer if args.sftp_root else True, **opts
+    ))
 
-        # Cleanup properly when terminated
-        signal.signal(signal.SIGINT, loop.stop)
-        signal.signal(signal.SIGTERM, loop.stop)
-        try:
+    # Cleanup properly when terminated
+    signal.signal(signal.SIGINT, loop.stop)
+    signal.signal(signal.SIGTERM, loop.stop)
+    try:
+        # Wait until the server is completely ready to go before creating a PID file for the loop
+        with pidfile.PidFile(args.pid_file):
             loop.run_forever()
-        except KeyboardInterrupt:
-            loop.stop()
+    except KeyboardInterrupt:
+        loop.stop()
