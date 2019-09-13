@@ -26,7 +26,7 @@ def used_ports() -> Set[int]:
     return {x.laddr.port for x in psutil.net_connections()}
 
 
-def unused_port() -> Generator[int, None, None]:
+def unused_ports() -> Generator[int, None, None]:
     '''
     :return: A generator that gets the next unused port from the user range
     '''
@@ -43,9 +43,9 @@ def ssh_keypair() -> Tuple[str, str]:
     return os.path.join(helpers_dir, 'id_rsa_testing'), os.path.join(helpers_dir, 'id_rsa_testing.pub')
 
 
-def spawn_server(port: int, pid_file: str, **kwargs) -> subprocess.Popen:
+def spawn_server(sftp_port: int, pid_file: str, **kwargs) -> subprocess.Popen:
     '''
-    :param port: The port for the server to run on
+    :param sftp_port: The port for the server to run on
     :param pid_file: The path where the server will create a PID file
     :param kwargs: SSHServer connection options that will be passed to the server
     :return: A subprocess Pipe to the process
@@ -53,7 +53,7 @@ def spawn_server(port: int, pid_file: str, **kwargs) -> subprocess.Popen:
     server_cmd = [
                      sys.executable,
                      sftp_server.__file__,
-                     f'--port={port}',
+                     f'--sftp-port={sftp_port}',
                      f'--pid-file={pid_file}',
                  ] + [f'--{key.replace("_", "-")}={value}' for key, value in kwargs.items()]
     print(' '.join(server_cmd))
@@ -118,15 +118,39 @@ def basic_sftp_server() -> Tuple[int, str, str]:
     pid_file = os.path.join(tempfile.gettempdir(), f'asyncssh_test_{str(uuid.uuid4())[:8]}.pid')
     private_key, public_key = ssh_keypair()
     root = sftp_root()
-    port = next(unused_port())
+    port = unused_ports()
+    sftp_port = next(port)
     server = spawn_server(
-        port=port,
+        sftp_port=sftp_port,
         authorized_client_keys=public_key,
         server_host_keys=private_key,
         pid_file=pid_file,
         sftp_root=root.name,
     )
-    yield port, private_key, root.name
+    yield sftp_port, private_key, root.name
+    server.kill()
+    if os.path.exists(pid_file):
+        os.remove(pid_file)
+
+
+@pytest.fixture(scope='function')
+def sftp_ssh_server() -> Tuple[int, int, str]:
+    # Generate a unique pid_file name, but do not create the file
+    pid_file = os.path.join(tempfile.gettempdir(), f'asyncssh_test_{str(uuid.uuid4())[:8]}.pid')
+    private_key, public_key = ssh_keypair()
+    port = unused_ports()
+    sftp_port = next(port)
+    ssh_port = next(port)
+    # TODO for testing commands should ssh and sftp be on the same port?
+    # If yes then set `reuse_address` and `reuse_port` to `True`
+    server = spawn_server(
+        sftp_port=sftp_port,
+        ssh_port=ssh_port,
+        authorized_client_keys=public_key,
+        server_host_keys=private_key,
+        pid_file=pid_file,
+    )
+    yield sftp_port, ssh_port, private_key
     server.kill()
     if os.path.exists(pid_file):
         os.remove(pid_file)
@@ -201,21 +225,21 @@ class TestAsyncSSH:
         assert os.path.exists(dest_path)
 
     @pytest.mark.asyncio
-    async def test_cmd(self, hub: Hub, basic_sftp_server: Tuple[int, str, str]):
+    async def test_cmd(self, hub: Hub, sftp_ssh_server: Tuple[int, int, str]):
         # Setup
-        port, private_key, _ = basic_sftp_server
+        sftp_port, ssh_port, private_key = sftp_ssh_server
         name = 'localhost'
         command = ''
         target = {
             'host': name,
-            'port': port, 'known_hosts': None,
+            'port': sftp_port, 'known_hosts': None,
             'client_keys': [private_key],
         }
         await hub.tunnel.asyncssh.create(name=name, target=target)
 
         # Execute
-        return  # TODO implement the rest of this test
-        await hub.tunnel.asyncssh.cmd(name=name, command=command)
+        # TODO Run a command and verify that it executed correctly on the remote
+        # await hub.tunnel.asyncssh.cmd(name=name, command=command)
 
         # Verify
 
@@ -224,8 +248,7 @@ class TestAsyncSSH:
         # Setup
         port, private_key, _ = basic_sftp_server
         name = 'localhost'
-        local = ''
-        remote = ''
+        remote = next(unused_ports())
         target = {
             'host': name,
             'port': port, 'known_hosts': None,
@@ -234,7 +257,8 @@ class TestAsyncSSH:
         await hub.tunnel.asyncssh.create(name=name, target=target)
 
         # Execute
-        return  # TODO Implement the rest of this test
-        await hub.tunnel.asyncssh.tunnel(name=name, remote=remote, local=local)
+        await hub.tunnel.asyncssh.tunnel(name=name, local=port, remote=remote)
 
         # Verify
+        # TODO How to verify that the tunnel was successful? It's clear from the logs that it is:
+        # `Creating remote TCP forwarder from port xxxxx to localhost, port xxxxx`
