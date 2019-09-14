@@ -49,15 +49,17 @@ async def create(hub, name: str, target: Dict[str, Any]):
     # The id MUST be in the target, everything else might be in the target, conf, or elsewhere
     id_ = target.get('host', target.get('id'))
 
+    possible_options = set(inspect.getfullargspec(asyncssh.SSHClientConnectionOptions.prepare).args)
+    # Remove options from `inspect` that don't belong
+    possible_options -= {'self', 'args', 'kwargs'}
+    # Add connection options that aren't specified in `SSHClientConnectionOptions.prepare`
+    possible_options.update({'port', 'loop', 'tunnel', 'family', 'flags', 'local_addr', 'options'})
     # Check for each possible SSHClientConnectionOption in the target, config, then autodetect (if necessary)
-    con_opts = {}
-    for arg in inspect.getfullargspec(asyncssh.SSHClientConnectionOptions.prepare).args[1:]:
+    con_opts = {'known_hosts': None}
+    for arg in possible_options:
         opt = _get_asyncssh_opt(hub, target, arg)
-        if opt is None:
-            continue
-        con_opts[arg] = opt
-    if 'known_hosts' not in con_opts:
-        con_opts['known_hosts'] = None
+        if opt is not None:
+            con_opts[arg] = opt
 
     conn = await asyncssh.connect(id_, **con_opts)
     sftp = await conn.start_sftp_client()
@@ -82,12 +84,12 @@ async def get(hub, name: str, source: str, dest: str):
     await sftp.get(source, dest)
 
 
-async def cmd(hub, name: str, cmd: str):
+async def cmd(hub, name: str, command: str):
     '''
     Execute the given command on the machine associated with the named connection
     '''
     con = hub.tunnel.asyncssh.CONS[name]['con']
-    return await con.run(cmd)
+    return await con.run(command)
 
 
 async def tunnel(hub, name: str, remote: str, local: str):
@@ -98,7 +100,7 @@ async def tunnel(hub, name: str, remote: str, local: str):
     listener = await con.forward_remote_port('', remote, 'localhost', local)
 
 
-async def destroy(hub, name:str):
+async def destroy(hub, name: str):
     '''
     Destroy the named connection
     '''

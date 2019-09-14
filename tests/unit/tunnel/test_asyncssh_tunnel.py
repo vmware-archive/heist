@@ -1,8 +1,9 @@
 #!/usr/bin/python3
-from pop.hub import Hub
-import pop.utils.testing as testing
+# Import local libs
 import heis.tunnel.asyncssh_tunnel as asyncssh_tunnel
-import tests.unit.helpers.mock_hub as helpers
+import tests.helpers.mock_hub as helpers
+
+# Import 3rd Party libs
 import mock
 
 

@@ -1,13 +1,18 @@
 #!/usr/bin/python3
-import heis.heis.salt_master
-import mock
+# Import Python libs
 import os
+import secrets
+from typing import Any, Dict, Tuple
+
+# Import Local libs
+import heis.heis.salt_master
+import tests.helpers.mock_hub as helpers
+
+# Import 3rd-party libs
+import mock
 import pop.utils.testing as testing
 import pop.hub
 import pytest
-import secrets
-import tests.unit.helpers.mock_hub as helpers
-from typing import Any, Dict, Tuple
 
 
 @pytest.fixture

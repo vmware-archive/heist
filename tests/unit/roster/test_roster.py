@@ -1,8 +1,10 @@
 #!/usr/bin/python3
+# Import local libs
 import heis.roster.init
-import mock
+import tests.helpers.mock_hub as helpers
+
+# Import 3rd-party libs
 import pop.utils.testing as testing
-import tests.unit.helpers.mock_hub as helpers
 import pytest
 
 
