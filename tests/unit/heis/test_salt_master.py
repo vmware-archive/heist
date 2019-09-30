@@ -66,7 +66,9 @@ class TestSaltMaster:
                           mk_config_data: Tuple[str, str]):
         # Setup
         artifacts_dir = 'art'
-        mock_hub.OPT = {'heis': {'artifacts_dir': artifacts_dir}}
+        mock_hub.OPT = {'heis': {'artifacts_dir': artifacts_dir,
+                                 'checkin_time': 1,
+                                 'dynamic_upgrade': False}}
         minion = os.path.join(artifacts_dir, 'salt-minion.pex')
         pytar = os.path.join(artifacts_dir, 'py374.txz')
         minion_config, _ = mk_config_data
