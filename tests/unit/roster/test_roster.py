@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 # Import local libs
-import heis.roster.init
+import heist.roster.init
 import tests.helpers.mock_hub as helpers
 
 # Import 3rd-party libs
@@ -24,7 +24,7 @@ class TestSaltMaster:
         mock_hub.roster.yaml.read.return_value = ready
 
         # Execute
-        result = await heis.roster.init.read(mock_hub, roster)
+        result = await heist.roster.init.read(mock_hub, roster)
 
         # Verify
         mock_hub.roster.yaml.read.assert_called_once()

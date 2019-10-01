@@ -57,7 +57,7 @@ def parse_args() -> Tuple[argparse.Namespace, Dict[str, str or int]]:
     possible_options -= {'self', 'args', 'kwargs', 'error_handler'}
 
     # Setup argument parser
-    parser = argparse.ArgumentParser(description='Spawn an asyncssh server for testing Heis')
+    parser = argparse.ArgumentParser(description='Spawn an asyncssh server for testing Heist')
     parser.add_argument('--sftp-root', type=str)
     parser.add_argument('--sftp-port', type=int)
     parser.add_argument('--ssh-port', type=int)

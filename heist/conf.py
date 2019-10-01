@@ -1,6 +1,6 @@
 CLI_CONFIG = {
     'artifacts_dir': {
-        'default': '/var/lib/heis/artifacts',
+        'default': '/var/lib/heist/artifacts',
         'help': 'The location to look for artifacts that will be sent to target systems',
         },
     'roster': {
@@ -8,7 +8,7 @@ CLI_CONFIG = {
         'help': 'The type of roster to use to load up the remote systems to tunnel to'
         },
     'roster_dir': {
-        'default': '/etc/heis/rosters',
+        'default': '/etc/heist/rosters',
         'help': 'The directory to look for rosters',
         },
     'manager': {
@@ -23,14 +23,14 @@ CLI_CONFIG = {
     'dynamic_upgrade': {
         'default': False,
         'action': 'store_true',
-        'help': 'Tell heis to detect when new binaries are available and dynamically upgrade target systems'
+        'help': 'Tell heist to detect when new binaries are available and dynamically upgrade target systems'
         },
     }
 CONFIG = {}
 GLOBAL = {}
 SUBS = {}
 DYNE = {
-        'heis': ['heis'],
+        'heist': ['heist'],
         'tunnel': ['tunnel'],
         'roster': ['roster'],
         }

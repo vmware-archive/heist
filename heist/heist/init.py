@@ -1,5 +1,5 @@
 '''
-The entry point for Heis, this is where config loading and the project
+The entry point for Heist, this is where config loading and the project
 spine is set up
 '''
 # Import python libs
@@ -10,10 +10,10 @@ log = logging.getLogger(__name__)
 
 
 def __init__(hub):
-    hub.heis.CONS = {}
-    hub.pop.conf.integrate('heis', cli='heis', roots=True)
-    hub.heis.init.load_subs()
-    hub.heis.init.start()
+    hub.heist.CONS = {}
+    hub.pop.conf.integrate('heist', cli='heist', roots=True)
+    hub.heist.init.load_subs()
+    hub.heist.init.start()
 
 
 def load_subs(hub):
@@ -30,9 +30,9 @@ def start(hub):
     Start the async loop and get the process rolling
     '''
     hub.pop.loop.start(
-        hub.heis.init.run(),
-        sigint=hub.heis.init.clean,
-        sigterm=hub.heis.init.clean)
+        hub.heist.init.run(),
+        sigint=hub.heist.init.clean,
+        sigterm=hub.heist.init.clean)
 
 
 async def run(hub):
@@ -40,10 +40,10 @@ async def run(hub):
     Configs, rosters and targets have been loaded, time to execute the
     remote system calls
     '''
-    roster = hub.OPT['heis']['roster']
+    roster = hub.OPT['heist']['roster']
     remotes = await hub.roster.init.read(roster)
-    manager = hub.OPT['heis']['manager']
-    await getattr(hub, f'heis.{manager}.run')(remotes)
+    manager = hub.OPT['heist']['manager']
+    await getattr(hub, f'heist.{manager}.run')(remotes)
 
 
 async def clean(hub, signal: int = None):
@@ -54,13 +54,13 @@ async def clean(hub, signal: int = None):
         log.warning(f'Got signal {signal}! Cleaning up connections')
     coros = []
     # First clean up the remote systems
-    for t_name, vals in hub.heis.CONS.items():
+    for t_name, vals in hub.heist.CONS.items():
         manager = vals['manager']
-        coros.append(getattr(hub, f'heis.{manager}.clean')(t_name))
+        coros.append(getattr(hub, f'heist.{manager}.clean')(t_name))
     await asyncio.gather(*coros)
     # Then shut down connections
     coros = []
-    for t_name, vals in hub.heis.CONS.items():
+    for t_name, vals in hub.heist.CONS.items():
         t_type = vals['t_type']
         coros.append(getattr(hub, f'tunnel.{t_type}.destroy')(t_name))
     await asyncio.gather(*coros)

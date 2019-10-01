@@ -4,7 +4,7 @@ import tempfile
 from typing import Tuple
 
 # Import local libs
-import heis.roster.yaml
+import heist.roster.yaml
 import tests.helpers.mock_hub as helpers
 
 # Import 3rd-party libs
@@ -24,12 +24,12 @@ YAML_ROSTER = 'chickeasdfn'
 @pytest.fixture
 def mock_hub():
     # A fixture is required for asynchronous tests to access a mock_hub
-    return helpers.mock_hub(subs=['heis.heis', 'heis.roster', 'rend', 'output'])
+    return helpers.mock_hub(subs=['heist.heist', 'heist.roster', 'rend', 'output'])
 
 
 @pytest.fixture
 def yaml_roster():
-    with tempfile.TemporaryDirectory(prefix='heis_yaml_', suffix='_test') as temp_dir:
+    with tempfile.TemporaryDirectory(prefix='heist_yaml_', suffix='_test') as temp_dir:
         with tempfile.NamedTemporaryFile('w+', dir=temp_dir, suffix='.yml', delete=False) as yaml_roster:
             yaml_roster.file.write(YAML_ROSTER)
         yield temp_dir, yaml_roster.name
@@ -40,10 +40,10 @@ class TestYamlFile:
     async def test_read(self, mock_hub: testing.MockHub, yaml_roster: Tuple[str, str]):
         # Setup
         temp_dir, roster = yaml_roster
-        mock_hub.OPT = {'heis': {'roster_dir': temp_dir}}
+        mock_hub.OPT = {'heist': {'roster_dir': temp_dir}}
 
         # Execute
-        result = await heis.roster.yaml.read(mock_hub)
+        result = await heist.roster.yaml.read(mock_hub)
 
         # Verify
         mock_hub.rend.init.parse.assert_called_once_with(fn=roster, pipe='yaml')

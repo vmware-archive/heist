@@ -20,7 +20,7 @@ def __init__(hub):
     '''
     Set up data structures for this module to use
     '''
-    hub.heis.salt_master.FUTURES = {}
+    hub.heist.salt_master.FUTURES = {}
 
 
 async def _start_minion(hub, t_type, t_name, tgt, run_dir):
@@ -31,7 +31,7 @@ async def _start_minion(hub, t_type, t_name, tgt, run_dir):
     future = asyncio.ensure_future(getattr(hub, f'tunnel.{t_type}.cmd')(
         t_name,
         f' {tgt} minion --config-dir {os.path.join(run_dir, "conf")} --pid-file={pfile}'))
-    hub.heis.salt_master.FUTURES[t_name] = future
+    hub.heist.salt_master.FUTURES[t_name] = future
     # Call an await to give the future a chance to run
     await asyncio.sleep(0)
 
@@ -43,7 +43,7 @@ async def run(hub, remotes: List[Dict[str, Any]]):
     '''
     coros = []
     for remote in remotes:
-        coros.append(hub.heis.salt_master.single(remote))
+        coros.append(hub.heist.salt_master.single(remote))
     await asyncio.gather(*coros)
 
 
@@ -79,7 +79,7 @@ async def deploy(hub, t_name, t_type, bin, run_dir):
     '''
     tgt = os.path.join(run_dir, os.path.basename(bin))
     root_dir = os.path.join(run_dir, 'root')
-    config = hub.heis.salt_master.mk_config(root_dir)
+    config = hub.heist.salt_master.mk_config(root_dir)
 
     # run salt deployment
     await getattr(hub, f'tunnel.{t_type}.cmd')(t_name, f'mkdir -p {os.path.join(run_dir, "conf")}')
@@ -96,19 +96,19 @@ async def update(hub, t_name, t_type, bin, tgt, run_dir):
     Re-deploy the latest minion to the remote system
     '''
     # TODO: When updating clean out the old deployment
-    await hub.heis.salt_master.clean(t_name)
-    tgt = await hub.heis.salt_master.deploy(t_name, t_type, bin, run_dir)
-    hub.heis.CONS[t_name]['tgt'] = tgt
+    await hub.heist.salt_master.clean(t_name)
+    tgt = await hub.heist.salt_master.deploy(t_name, t_type, bin, run_dir)
+    hub.heist.CONS[t_name]['tgt'] = tgt
     await _start_minion(hub, t_type, t_name, tgt, run_dir)
 
 
 async def clean(hub, t_name):
-    run_dir = hub.heis.CONS[t_name]['run_dir']
-    t_type = hub.heis.CONS[t_name]['t_type']
+    run_dir = hub.heist.CONS[t_name]['run_dir']
+    t_type = hub.heist.CONS[t_name]['t_type']
     pfile = os.path.join(run_dir, 'pfile')
     await getattr(hub, f'tunnel.{t_type}.cmd')(t_name, f'kill `cat {pfile}`')
     await getattr(hub, f'tunnel.{t_type}.cmd')(t_name, f'rm -rf {run_dir}')
-    await hub.heis.salt_master.FUTURES[t_name]
+    await hub.heist.salt_master.FUTURES[t_name]
 
 
 async def single(hub, remote: Dict[str, Any]):
@@ -117,13 +117,13 @@ async def single(hub, remote: Dict[str, Any]):
     '''
     # create tunnel
     t_name = secrets.token_hex()
-    run_dir = f'/var/tmp/heis/{secrets.token_hex()[:4]}'
+    run_dir = f'/var/tmp/heist/{secrets.token_hex()[:4]}'
     t_type = remote.get('tunnel', 'asyncssh')
     await getattr(hub, f'tunnel.{t_type}.create')(t_name, remote)
     # Deploy
-    bin = hub.heis.salt_master.latest('salt', hub.OPT['heis']['artifacts_dir'])
-    tgt = await hub.heis.salt_master.deploy(t_name, t_type, bin, run_dir)
-    hub.heis.CONS[t_name] = {
+    bin = hub.heist.salt_master.latest('salt', hub.OPT['heist']['artifacts_dir'])
+    tgt = await hub.heist.salt_master.deploy(t_name, t_type, bin, run_dir)
+    hub.heist.CONS[t_name] = {
         'run_dir': run_dir,
         't_type': t_type,
         'manager': 'salt_master',
@@ -135,9 +135,9 @@ async def single(hub, remote: Dict[str, Any]):
     # Start minion
     await _start_minion(hub, t_type, t_name, tgt, run_dir)
     while True:
-        await asyncio.sleep(hub.OPT['heis']['checkin_time'])
-        if hub.OPT['heis']['dynamic_upgrade']:
-            latest = hub.heis.salt_master.latest('salt', hub.OPT['heis']['artifacts_dir'])
+        await asyncio.sleep(hub.OPT['heist']['checkin_time'])
+        if hub.OPT['heist']['dynamic_upgrade']:
+            latest = hub.heist.salt_master.latest('salt', hub.OPT['heist']['artifacts_dir'])
             if latest != bin:
                 bin = latest
-                await hub.heis.salt_master.update(t_name, t_type, latest, tgt, run_dir)
+                await hub.heist.salt_master.update(t_name, t_type, latest, tgt, run_dir)

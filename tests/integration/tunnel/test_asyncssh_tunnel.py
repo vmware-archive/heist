@@ -90,25 +90,25 @@ def random_file(directory: str = None, name: str = None, size: int = 1024) -> st
 
 
 def sftp_root() -> tempfile.TemporaryDirectory:
-    temp_dir = tempfile.TemporaryDirectory(prefix='heis_asyncssh_', suffix='_root_data')
+    temp_dir = tempfile.TemporaryDirectory(prefix='heist_asyncssh_', suffix='_root_data')
     return temp_dir
 
 
 @pytest.fixture(scope='function')
 def hub() -> Hub:
     hub = Hub()
-    hub.OPT = {'heis': {}}
+    hub.OPT = {'heist': {}}
     with mock.patch.object(sys, 'argv', sys.argv[:1]):
-        hub.pop.sub.add('heis.heis')
+        hub.pop.sub.add('heist.heist')
 
     hub.pop.sub.add(dyne_name='tunnel')
     yield hub
-    hub.heis.init.clean()
+    hub.heist.init.clean()
 
 
 @pytest.fixture(scope='function')
 def temp_dir() -> tempfile.TemporaryDirectory:
-    temp_dir = tempfile.TemporaryDirectory(prefix='heis_asyncssh_', suffix='_test_data')
+    temp_dir = tempfile.TemporaryDirectory(prefix='heist_asyncssh_', suffix='_test_data')
     yield temp_dir.name
 
 
