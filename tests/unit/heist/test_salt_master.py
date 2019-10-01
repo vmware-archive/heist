@@ -5,7 +5,7 @@ import secrets
 from typing import Any, Dict, Tuple
 
 # Import Local libs
-import heis.heis.salt_master
+import heist.heist.salt_master
 import tests.helpers.mock_hub as helpers
 
 # Import 3rd-party libs
@@ -18,7 +18,7 @@ import pytest
 @pytest.fixture
 def mock_hub() -> testing.MockHub:
     # A fixture is required for asynchronous tests to access a mock_hub
-    return helpers.mock_hub(subs=['heis.heis', 'roster', 'tunnel'])
+    return helpers.mock_hub(subs=['heist.heist', 'roster', 'tunnel'])
 
 
 @pytest.fixture
@@ -26,7 +26,7 @@ def mk_config_data():
     # Setup
     hub = pop.hub.Hub()
     root_dir = 'arbitrary_string'
-    minion_config = heis.heis.salt_master.mk_config(hub, root_dir)
+    minion_config = heist.heist.salt_master.mk_config(hub, root_dir)
     # Pass resources to test
     yield minion_config, root_dir
     # TearDown
@@ -46,8 +46,8 @@ def remote() -> Dict[str, Any]:
 class TestSaltMaster:
     @pytest.mark.asyncio
     async def test_run(self, mock_hub: testing.MockHub, remote: Dict[str, Dict[str, str]]):
-        await heis.heis.salt_master.run(mock_hub, [remote])
-        mock_hub.heis.salt_master.single.assert_called_with(remote)
+        await heist.heist.salt_master.run(mock_hub, [remote])
+        mock_hub.heist.salt_master.single.assert_called_with(remote)
 
     def test_mk_config(self, mk_config_data: Tuple[str, str]):
         minion_config, root_dir = mk_config_data
@@ -66,20 +66,20 @@ class TestSaltMaster:
                           mk_config_data: Tuple[str, str]):
         # Setup
         artifacts_dir = 'art'
-        mock_hub.OPT = {'heis': {'artifacts_dir': artifacts_dir,
+        mock_hub.OPT = {'heist': {'artifacts_dir': artifacts_dir,
                                  'checkin_time': 1,
                                  'dynamic_upgrade': False}}
         minion = os.path.join(artifacts_dir, 'salt-minion.pex')
         pytar = os.path.join(artifacts_dir, 'py374.txz')
         minion_config, _ = mk_config_data
-        mock_hub.heis.salt_master.mk_config.return_value = minion_config
+        mock_hub.heist.salt_master.mk_config.return_value = minion_config
         # We need to know exactly what the token hex will be, patch it's call
         t_name = secrets.token_hex()
-        run_dir = f'/var/tmp/heis/{t_name[:4]}'
+        run_dir = f'/var/tmp/heist/{t_name[:4]}'
 
         # Execute
         with mock.patch.object(secrets, 'token_hex', lambda: t_name):
-            await heis.heis.salt_master.single(mock_hub, remote)
+            await heist.heist.salt_master.single(mock_hub, remote)
 
         # Verify
         mock_hub.tunnel.asyncssh.create.assert_called_once_with(t_name, remote)

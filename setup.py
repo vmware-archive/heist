@@ -7,7 +7,7 @@ import sys
 import shutil
 from setuptools import setup, Command
 
-NAME = 'heis'
+NAME = 'heist'
 DESC = ('Ephemeral software tunneling and delivery system')
 
 # Version info -- read without importing
@@ -61,7 +61,7 @@ setup(name=NAME,
           ],
       entry_points={
         'console_scripts': [
-            'heis = heis.scripts:start',
+            'heist = heist.scripts:start',
             ],
           },
       packages=discover_packages(),

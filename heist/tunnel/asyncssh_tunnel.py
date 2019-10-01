@@ -30,7 +30,7 @@ def _get_asyncssh_opt(hub, target: Dict[str, Any], option: str, default: Any = N
     '''
     result = target.get(option)
     if not result:
-        result = hub.OPT['heis'].get(option)
+        result = hub.OPT['heist'].get(option)
     if not result:
         result = _autodetect_asyncssh_opt(hub, option)
     if not result:

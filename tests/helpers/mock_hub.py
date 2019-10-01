@@ -13,14 +13,14 @@ def mock_hub(subs: List[str] = None, sys_argv: List[str] = None) -> testing.Mock
     if subs is None:
         subs = []
 
-    # heis.heis is the "main", therefore command line args must be patched to remove pytest args
-    if 'heis.heis' in subs:
-        subs.remove('heis.heis')
+    # heist.heist is the "main", therefore command line args must be patched to remove pytest args
+    if 'heist.heist' in subs:
+        subs.remove('heist.heist')
         if not sys_argv:
             # If args weren't specified, strip pytest args
             sys_argv = sys.argv[:1]
         with mock.patch.object(sys, 'argv', sys_argv):
-            hub.pop.sub.add('heis.heis')
+            hub.pop.sub.add('heist.heist')
 
     # Add specified subs
     for sub in subs:
