@@ -13,7 +13,6 @@ def __init__(hub):
     hub.heist.CONS = {}
     hub.pop.conf.integrate('heist', cli='heist', roots=True)
     hub.heist.init.load_subs()
-    hub.heist.init.start()
 
 
 def load_subs(hub):

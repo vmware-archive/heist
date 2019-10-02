@@ -3,7 +3,7 @@
 import pytest
 
 
-class TestYamlFile:
+class TestFlatFile:
     @pytest.mark.asyncio
     async def test_read(self):
         ...

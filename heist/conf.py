@@ -4,7 +4,7 @@ CLI_CONFIG = {
         'help': 'The location to look for artifacts that will be sent to target systems',
         },
     'roster': {
-        'default': 'yaml',
+        'default': 'flat',
         'help': 'The type of roster to use to load up the remote systems to tunnel to'
         },
     'roster_dir': {
@@ -24,6 +24,10 @@ CLI_CONFIG = {
         'default': False,
         'action': 'store_true',
         'help': 'Tell heist to detect when new binaries are available and dynamically upgrade target systems'
+        },
+    'renderer': {
+        'default': 'jinja|yaml',
+        'help': 'Specify the renderer to use to render heist roster files'
         },
     }
 CONFIG = {}
