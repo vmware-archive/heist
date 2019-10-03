@@ -2,19 +2,10 @@
 
 # Import local libs
 import heist.roster.scan
-import tests.helpers.mock_hub as helpers
 
 # Import 3rd-party libs
 import pytest
 
-
-@pytest.fixture
-def mock_hub():
-    '''
-    mock the needed subs for the flat roster tests
-    '''
-    # A fixture is required for asynchronous tests to access a mock_hub
-    return helpers.mock_hub(subs=['heist.heist', 'heist.roster'])
 
 class TestScanRoster:
     '''

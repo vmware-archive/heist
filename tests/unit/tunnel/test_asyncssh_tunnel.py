@@ -34,7 +34,7 @@ class TestAsyncSSH:
         Test getting option from autodetect of target and config aren't available
         '''
         mock_hub = helpers.mock_hub()
-        mock_hub.OPT = {'heist': {}}
+        mock_hub.OPT = {'heist': {'roster_defaults': {}}}
         target = {}
         result = asyncssh_tunnel._get_asyncssh_opt(mock_hub, target=target, option='username', default='default')
         assert result == 'autodetect'

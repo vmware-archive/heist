@@ -7,7 +7,6 @@ from typing import Tuple
 
 # Import local libs
 import heist.roster.flat
-import tests.helpers.mock_hub as helpers
 import pop.hub
 from pop.utils import testing
 
@@ -23,15 +22,6 @@ host_str_id:
 host_num_id:
   id: 1234
 '''
-
-
-@pytest.fixture
-def mock_hub():
-    '''
-    mock the needed subs for the flat roster tests
-    '''
-    # A fixture is required for asynchronous tests to access a mock_hub
-    return helpers.mock_hub(subs=['heist.heist', 'heist.roster', 'rend', 'output'])
 
 @pytest.fixture(scope='function')
 def hub():
