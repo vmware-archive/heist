@@ -1,4 +1,10 @@
+import os
+
 CLI_CONFIG = {
+    'config': {
+        'default': os.path.join(os.sep, 'etc', 'heist', 'heist.conf'),
+        'help': 'Heist configuration location'
+        },
     'artifacts_dir': {
         'default': '/var/lib/heist/artifacts',
         'help': 'The location to look for artifacts that will be sent to target systems',
@@ -29,8 +35,35 @@ CLI_CONFIG = {
         'default': 'jinja|yaml',
         'help': 'Specify the renderer to use to render heist roster files'
         },
+    'target': {
+        'options': ['--tgt', '-t'],
+        'default': '',
+        'help': 'target used for multiple rosters'
+        },
+    'password': {
+        'options': ['--pass', '-p'],
+        'default': '',
+        'help': 'password to authenticate against remote host'
+        },
+    'username': {
+        'options': ['--user', '-u'],
+        'default': '',
+        'help': 'username to authenticate against remote host'
+        },
+    'ssh_scan_ports': {
+        'options': ['--ports'],
+        'default': [22],
+        'help': 'Comma-separated list of ports to scan in the scan roster.'
+        },
     }
-CONFIG = {}
+CONFIG = {
+    'roster_defaults': {
+        'default': {},
+        'type': dict,
+        'help': 'Defaults options to use for all rosters. CLI options will'
+                'override these defaults'
+        },
+    }
 GLOBAL = {}
 SUBS = {}
 DYNE = {
