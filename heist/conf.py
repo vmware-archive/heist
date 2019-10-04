@@ -55,6 +55,11 @@ CLI_CONFIG = {
         'default': [22],
         'help': 'Comma-separated list of ports to scan in the scan roster.'
         },
+    'artifact_version': {
+        'options': ['-a, --artifact'],
+        'default': '',
+        'help': 'Version of the artifact to use for heist'
+        },
     }
 CONFIG = {
     'roster_defaults': {
