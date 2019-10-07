@@ -125,7 +125,7 @@ async def get_version_pypi(hub, t_os):
     async with aiohttp.ClientSession() as session:
         data = await hub.heist.salt_master.fetch(session, url)
         if not data:
-            log.critical(f'Query to pypi failed, failing back to'
+            log.critical(f'Query to pypi failed, falling back to'
                          f'pre-downloaded artifacts')
             return False, data
         if not ver:
@@ -160,7 +160,8 @@ async def get_artifact(hub, t_name, t_type, art_dir, ver, data):
     os.remove(tar_l)
     os.remove(os.path.join(art_dir, 'PKG-INFO'))
     if not any(ver in x for x in os.listdir(art_dir)):
-        log.critical(f'Did not find the {ver} artifact in {art_dir}')
+        log.critical(f'Did not find the {ver} artifact in {art_dir}.'
+                     f' Untarring the artifact failed or did not include version')
         return False
     return True
 

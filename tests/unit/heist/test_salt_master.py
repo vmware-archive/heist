@@ -172,7 +172,7 @@ class TestSaltMaster:
         files = ['PKG-INFO', f'salt-{ver}']
         tar_l = os.path.join(tmp_path, f'salt-{ver}.tar.gz')
 
-        with tarfile.open(tar_l, "w:gz") as tar:
+        with tarfile.open(tar_l, 'w:gz') as tar:
             for fn_ in files:
                 tmp = tmp_path / fn_
                 tmp.write_text(f'test-info for {fn_}')
@@ -182,10 +182,7 @@ class TestSaltMaster:
 
         mock_hub.heist.salt_master.fetch.return_value = tar_l
         mock_hub.heist.salt_master.latest.return_value = False
-        ret = await heist.heist.salt_master.get_artifact(mock_hub,
-                                                         t_name,
-                                                         'asyncssh',
-                                                         tmp_path,
-                                                         ver,
-                                                         data)
+        ret = await heist.heist.salt_master.get_artifact(mock_hub, t_name,
+                                                         'asyncssh', tmp_path,
+                                                         ver, data)
         assert ret
