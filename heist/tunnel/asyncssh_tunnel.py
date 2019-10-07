@@ -67,7 +67,8 @@ async def create(hub, name: str, target: Dict[str, Any]):
     sftp = await conn.start_sftp_client()
     hub.tunnel.asyncssh.CONS[name] = {
         'con': conn,
-        'sftp': sftp}
+        'sftp': sftp,
+        'sudo': target.get('sudo', None)}
 
 
 async def send(hub, name: str, source: str, dest: str):
@@ -90,6 +91,9 @@ async def cmd(hub, name: str, command: str):
     '''
     Execute the given command on the machine associated with the named connection
     '''
+    sudo = hub.tunnel.asyncssh.CONS[name]['sudo']
+    if sudo:
+        command = f'sudo {command}'
     con = hub.tunnel.asyncssh.CONS[name]['con']
     return await con.run(command)
 
