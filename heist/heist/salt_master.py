@@ -4,10 +4,15 @@
 # Import python libs
 import secrets
 import asyncio
+import aiohttp
+import logging
 import os
+import tarfile
 import tempfile
 from distutils.version import StrictVersion
 from typing import Any, Dict, List
+
+log = logging.getLogger(__name__)
 
 CONFIG = '''master: 127.0.0.1
 master_port: {master_port}
@@ -58,9 +63,11 @@ def mk_config(hub, root_dir: str):
     return path
 
 
-def latest(hub, name: str, a_dir: str):
+def latest(hub, name: str, a_dir: str, version=False):
     '''
     Given the artifacts directory return the latest desired artifact
+
+    :param str version: Return the artifact for a specific version.
     '''
     names = []
     paths = {}
@@ -70,7 +77,80 @@ def latest(hub, name: str, a_dir: str):
             names.append(ver)
             paths[ver] = fn
     names = sorted(names, key=StrictVersion)
+    if version:
+        if version in names:
+            return os.path.join(a_dir, paths[version])
+        return False
     return os.path.join(a_dir, paths[names[-1]])
+
+
+async def detect_os(hub, t_name, t_type):
+    '''
+    Detect the os on the target system
+    '''
+    ret = await getattr(hub, f'tunnel.{t_type}.cmd')(t_name, 'uname -a')
+    if ret.returncode == 0:
+        if ret.stdout.lower().startswith('linux'):
+            return 'linux'
+        elif ret.stdout.lower().startswith('darwin'):
+            return 'darwin'
+
+
+async def fetch(session, url, download=False, location=False):
+    '''
+    Fetch a url and return json. If downloading artifact
+    return the download location.
+    '''
+    async with session.get(url) as resp:
+        if resp.status == 200:
+            if download:
+                with open(location, 'wb') as fn_:
+                    fn_.write(await resp.read())
+                return location
+            return await resp.json()
+
+
+async def get_version_pypi(hub, t_os):
+    '''
+    Query version and data from pypi api
+    '''
+    ver = hub.OPT['heist'].get('artifact_version')
+    if t_os == 'linux':
+        url = 'https://pypi.python.org/pypi/saltbin/json'
+
+    async with aiohttp.ClientSession() as session:
+        data = await fetch(session, url)
+        if not ver:
+            # we did not set version so query latest version from pypi
+            ver = list(data['releases'].keys())[-1]
+        return ver, data
+
+
+async def get_artifact(hub, t_name, t_type, art_dir, ver, data):
+    '''
+    Dowlnoad artifact if does not already exist. If artifact
+    version is not specified, download the latest from pypi
+    '''
+    await getattr(hub, f'tunnel.{t_type}.cmd')(t_name, f'mkdir -p {art_dir}')
+
+    # check to see if artifact already exists
+    if hub.heist.salt_master.latest('salt', art_dir, version=ver):
+        log.info(f'The Salt artifact {bin} already exists')
+        return True
+
+    py_url = data['releases'][ver][0]['url']
+    tar_name = os.path.basename(py_url)
+    tar_l = os.path.join(art_dir, tar_name)
+
+    # download and untar release tar ball
+    async with aiohttp.ClientSession() as session:
+        log.info(f'Downloading the artifact {tar_name} to {tar_l}')
+        tar_f = await fetch(session, py_url, download=True,
+                            location=tar_l)
+    tf = tarfile.open(tar_f)
+    tf.extractall(path=art_dir)
+    os.remove(tar_l)
+    os.remove(os.path.join(art_dir, 'PKG-INFO'))
 
 
 async def deploy(hub, t_name, t_type, bin, run_dir):
@@ -120,8 +200,14 @@ async def single(hub, remote: Dict[str, Any]):
     run_dir = f'/var/tmp/heist/{secrets.token_hex()[:4]}'
     t_type = remote.get('tunnel', 'asyncssh')
     await getattr(hub, f'tunnel.{t_type}.create')(t_name, remote)
+    t_os = await hub.heist.salt_master.detect_os(t_name, t_type)
+    art_dir = os.path.join(hub.OPT['heist']['artifacts_dir'], t_os)
+    ver, data = await hub.heist.salt_master.get_version_pypi(t_os)
+    await hub.heist.salt_master.get_artifact(t_name, t_type,
+                                             art_dir, ver=ver,
+                                             data=data)
     # Deploy
-    bin = hub.heist.salt_master.latest('salt', hub.OPT['heist']['artifacts_dir'])
+    bin = hub.heist.salt_master.latest('salt', art_dir, version=ver)
     tgt = await hub.heist.salt_master.deploy(t_name, t_type, bin, run_dir)
     hub.heist.CONS[t_name] = {
         'run_dir': run_dir,
