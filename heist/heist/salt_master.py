@@ -94,9 +94,11 @@ async def detect_os(hub, t_name, t_type):
             return 'linux'
         elif ret.stdout.lower().startswith('darwin'):
             return 'darwin'
+    log.critical('Could not determine the OS')
+    return False
 
 
-async def fetch(session, url, download=False, location=False):
+async def fetch(hub, session, url, download=False, location=False):
     '''
     Fetch a url and return json. If downloading artifact
     return the download location.
@@ -108,6 +110,8 @@ async def fetch(session, url, download=False, location=False):
                     fn_.write(await resp.read())
                 return location
             return await resp.json()
+        log.critical(f'Cannot query url {url}. Returncode {resp.status} returned')
+        return False
 
 
 async def get_version_pypi(hub, t_os):
@@ -119,7 +123,11 @@ async def get_version_pypi(hub, t_os):
         url = 'https://pypi.python.org/pypi/saltbin/json'
 
     async with aiohttp.ClientSession() as session:
-        data = await fetch(session, url)
+        data = await hub.heist.salt_master.fetch(session, url)
+        if not data:
+            log.critical(f'Query to pypi failed, falling back to'
+                         f'pre-downloaded artifacts')
+            return False, data
         if not ver:
             # we did not set version so query latest version from pypi
             ver = list(data['releases'].keys())[-1]
@@ -139,18 +147,23 @@ async def get_artifact(hub, t_name, t_type, art_dir, ver, data):
         return True
 
     py_url = data['releases'][ver][0]['url']
-    tar_name = os.path.basename(py_url)
-    tar_l = os.path.join(art_dir, tar_name)
+    tar_n = os.path.basename(py_url)
+    tar_l = os.path.join(art_dir, tar_n)
 
     # download and untar release tar ball
     async with aiohttp.ClientSession() as session:
-        log.info(f'Downloading the artifact {tar_name} to {tar_l}')
-        tar_f = await fetch(session, py_url, download=True,
-                            location=tar_l)
+        log.info(f'Downloading the artifact {tar_n} to {tar_l}')
+        tar_f = await hub.heist.salt_master.fetch(session, py_url,
+                                                  download=True, location=tar_l)
     tf = tarfile.open(tar_f)
     tf.extractall(path=art_dir)
     os.remove(tar_l)
     os.remove(os.path.join(art_dir, 'PKG-INFO'))
+    if not any(ver in x for x in os.listdir(art_dir)):
+        log.critical(f'Did not find the {ver} artifact in {art_dir}.'
+                     f' Untarring the artifact failed or did not include version')
+        return False
+    return True
 
 
 async def deploy(hub, t_name, t_type, bin, run_dir):
@@ -207,9 +220,10 @@ async def single(hub, remote: Dict[str, Any]):
     t_os = await hub.heist.salt_master.detect_os(t_name, t_type)
     art_dir = os.path.join(hub.OPT['heist']['artifacts_dir'], t_os)
     ver, data = await hub.heist.salt_master.get_version_pypi(t_os)
-    await hub.heist.salt_master.get_artifact(t_name, t_type,
-                                             art_dir, ver=ver,
-                                             data=data)
+    if data:
+        await hub.heist.salt_master.get_artifact(t_name, t_type,
+                                                 art_dir, ver=ver,
+                                                 data=data)
     # Deploy
     bin = hub.heist.salt_master.latest('salt', art_dir, version=ver)
     tgt = await hub.heist.salt_master.deploy(t_name, t_type, bin, run_dir)
@@ -227,7 +241,7 @@ async def single(hub, remote: Dict[str, Any]):
     while True:
         await asyncio.sleep(hub.OPT['heist']['checkin_time'])
         if hub.OPT['heist']['dynamic_upgrade']:
-            latest = hub.heist.salt_master.latest('salt', hub.OPT['heist']['artifacts_dir'])
+            latest = hub.heist.salt_master.latest('salt', art_dir)
             if latest != bin:
                 bin = latest
                 await hub.heist.salt_master.update(t_name, t_type, latest, tgt, run_dir)
