@@ -1,9 +1,12 @@
 # Import third party libs
 import asyncssh
 import inspect
+import logging
 from typing import Any, Dict
 
 __virtualname__ = 'asyncssh'
+
+log = logging.getLogger(__name__)
 
 
 def __init__(hub):
@@ -63,12 +66,17 @@ async def create(hub, name: str, target: Dict[str, Any]):
         if opt is not None:
             con_opts[arg] = opt
 
-    conn = await asyncssh.connect(id_, **con_opts)
+    try:
+        conn = await asyncssh.connect(id_, **con_opts)
+    except Exception:
+        log.error(f'Failed to connect to {id_}')
+        return False
     sftp = await conn.start_sftp_client()
     hub.tunnel.asyncssh.CONS[name] = {
         'con': conn,
         'sftp': sftp,
         'sudo': target.get('sudo', None)}
+    return True
 
 
 async def send(hub, name: str, source: str, dest: str):
@@ -91,7 +99,7 @@ async def cmd(hub, name: str, command: str):
     '''
     Execute the given command on the machine associated with the named connection
     '''
-    sudo = hub.tunnel.asyncssh.CONS[name]['sudo']
+    sudo = hub.tunnel.asyncssh.CONS[name].get('sudo')
     if sudo:
         command = f'sudo {command}'
     con = hub.tunnel.asyncssh.CONS[name]['con']

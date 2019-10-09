@@ -160,6 +160,7 @@ async def deploy(hub, t_name, t_type, bin, run_dir):
     tgt = os.path.join(run_dir, os.path.basename(bin))
     root_dir = os.path.join(run_dir, 'root')
     config = hub.heist.salt_master.mk_config(root_dir)
+    print(config)
 
     # run salt deployment
     await getattr(hub, f'tunnel.{t_type}.cmd')(t_name, f'mkdir -p {os.path.join(run_dir, "conf")}')
@@ -199,7 +200,10 @@ async def single(hub, remote: Dict[str, Any]):
     t_name = secrets.token_hex()
     run_dir = f'/var/tmp/heist/{secrets.token_hex()[:4]}'
     t_type = remote.get('tunnel', 'asyncssh')
-    await getattr(hub, f'tunnel.{t_type}.create')(t_name, remote)
+    created = await getattr(hub, f'tunnel.{t_type}.create')(t_name, remote)
+    if not created:
+        log.error(f'Connection to host {remote["host"]} failed')
+        return
     t_os = await hub.heist.salt_master.detect_os(t_name, t_type)
     art_dir = os.path.join(hub.OPT['heist']['artifacts_dir'], t_os)
     ver, data = await hub.heist.salt_master.get_version_pypi(t_os)

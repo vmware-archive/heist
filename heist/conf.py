@@ -32,7 +32,7 @@ CLI_CONFIG = {
         'help': 'Tell heist to detect when new binaries are available and dynamically upgrade target systems'
         },
     'renderer': {
-        'default': 'jinja|yaml',
+        'default': 'yaml',
         'help': 'Specify the renderer to use to render heist roster files'
         },
     'target': {
