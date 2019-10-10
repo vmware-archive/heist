@@ -4,13 +4,16 @@ spine is set up
 '''
 # Import python libs
 import asyncio
+import ipaddress
 import logging
+import socket
 
 log = logging.getLogger(__name__)
 
 
 def __init__(hub):
     hub.heist.CONS = {}
+    hub.heist.ROSTERS = {}
     hub.pop.conf.integrate('heist', cli='heist', roots=True)
     hub.heist.init.load_subs()
 
@@ -53,10 +56,12 @@ async def clean(hub, signal: int = None):
         log.warning(f'Got signal {signal}! Cleaning up connections')
     coros = []
     # First clean up the remote systems
-    for t_name, vals in hub.heist.CONS.items():
-        manager = vals['manager']
-        coros.append(getattr(hub, f'heist.{manager}.clean')(t_name))
-    await asyncio.gather(*coros)
+    for t_name, vals in hub.heist.ROSTERS.items():
+        if not vals.get('bootstrap'):
+            for t_name, vals in hub.heist.CONS.items():
+                manager = vals['manager']
+                coros.append(getattr(hub, f'heist.{manager}.clean')(t_name))
+                await asyncio.gather(*coros)
     # Then shut down connections
     coros = []
     for t_name, vals in hub.heist.CONS.items():
@@ -68,3 +73,16 @@ async def clean(hub, signal: int = None):
     for task in tasks:
         log.warning('Task remains that were not cleaned up, shutting down violently')
         task.cancel()
+
+
+def ip_is_loopback(hub, addr):
+    '''
+    helper function to determine if an addr
+    or hostname is a loopback address
+    '''
+    try:
+        info = socket.getaddrinfo(addr, 0)
+    except socket.gaierror:
+        log.critical('Could not determine if addr is loopback')
+        return False
+    return ipaddress.ip_address(info[0][-1][0]).is_loopback

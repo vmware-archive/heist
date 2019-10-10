@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 # Import Python libs
+import asyncio
 import os
 import secrets
 from typing import Any, Dict, Tuple
@@ -12,19 +13,19 @@ import heist.tunnel.asyncssh_tunnel
 import asyncssh.process
 import mock
 import pop.utils.testing as testing
-import pop.hub
 import pytest
 import tarfile
 
 
 @pytest.fixture
-def mk_config_data():
+def mk_config_data(hub, roster):
     # Setup
-    hub = pop.hub.Hub()
+    t_name = secrets.token_hex()
+    hub.heist.ROSTERS = {t_name: roster}
     root_dir = 'arbitrary_string'
-    minion_config = heist.heist.salt_master.mk_config(hub, root_dir)
+    minion_config = heist.heist.salt_master.mk_config(hub, root_dir, t_name)
     # Pass resources to test
-    yield minion_config, root_dir
+    yield minion_config, root_dir, hub.heist.ROSTERS
     # TearDown
     if os.path.exists(minion_config):
         os.remove(minion_config)
@@ -45,54 +46,69 @@ class TestSaltMaster:
         await heist.heist.salt_master.run(mock_hub, [remote])
         mock_hub.heist.salt_master.single.assert_called_with(remote)
 
-    def test_mk_config(self, mk_config_data: Tuple[str, str]):
-        minion_config, root_dir = mk_config_data
+
+    @pytest.mark.parametrize('roster',
+                             [{'publish_port': '4505'},
+                              {'master': '1.1.1.1',
+                               'master_port': '4506'},
+                              {}])
+    def test_mk_config(self, roster, mk_config_data: Tuple[str, str]):
+        '''
+        test heist.salt_master.mk_config
+        '''
+        minion_config, root_dir, roster_data = mk_config_data
         with open(minion_config, 'r') as min_conf:
             conf = dict(line.strip().split(': ') for line in min_conf.readlines())
 
-        assert conf['master'] == '127.0.0.1'
-        assert conf['master_port'] == '44506'
-        assert conf['publish_port'] == '44505'
+        for key, default in [('master', '127.0.0.1'),
+                             ('master_port', '44506'),
+                             ('publish_port', '44505')]:
+            if roster.get(key):
+                assert conf[key] == roster[key]
+            else:
+                assert conf[key] == default
+
+        if roster.get('master') == '1.1.1.1':
+            assert roster_data[list(roster_data.keys())[0]]['bootstrap']
+        else:
+            assert not roster_data[list(roster_data.keys())[0]].get('bootstrap')
+
         assert conf['root_dir'] == root_dir
 
+    @pytest.mark.parametrize('roster',
+                             [{'publish_port': '4505'}])
     @pytest.mark.asyncio
     async def test_single(self,
                           mock_hub: testing.MockHub,
                           remote: Dict[str, Dict[str, str]],
                           mk_config_data: Tuple[str, str]):
+        '''
+        test heist.salt_master.single
+        '''
         # Setup
         artifacts_dir = 'art'
         mock_hub.OPT = {'heist': {'artifacts_dir': artifacts_dir,
                                   'checkin_time': 1,
                                   'dynamic_upgrade': False}}
-        minion = os.path.join(artifacts_dir, 'salt-minion.pex')
-        pytar = os.path.join(artifacts_dir, 'py374.txz')
-        minion_config, _ = mk_config_data
+        mock_hub.heist.ROSTERS = {}
+        minion_config, _, _ = mk_config_data
         mock_hub.heist.salt_master.mk_config.return_value = minion_config
+        mock_hub.heist.salt_master.detect_os.return_value = 'linux'
+        mock_hub.heist.salt_master.get_version_pypi.return_value = ('2019.2.1', {})
+        patch_asyncio = mock.Mock(asyncio.sleep)
+        patch_asyncio.side_effect = [InterruptedError]
         # We need to know exactly what the token hex will be, patch it's call
         t_name = secrets.token_hex()
-        run_dir = f'/var/tmp/heist/{t_name[:4]}'
 
         # Execute
         with mock.patch.object(secrets, 'token_hex', lambda: t_name):
-            await heist.heist.salt_master.single(mock_hub, remote)
+            with mock.patch.object(heist.heist.salt_master, '_start_minion', patch_asyncio):
+                # Raises an error here so we do not stay in while loop during test
+                with pytest.raises(InterruptedError):
+                    await heist.heist.salt_master.single(mock_hub, remote)
 
         # Verify
         mock_hub.tunnel.asyncssh.create.assert_called_once_with(t_name, remote)
-        for cmd in [
-                f'mkdir -p {os.path.join(run_dir, "conf")}',
-                f'mkdir -p {os.path.join(run_dir, "root")}',
-                f'tar -xvf {os.path.join(run_dir, "py3.txz")} -C {run_dir}',
-                f'{os.path.join(run_dir, "py3", "bin", "python3")} {os.path.join(run_dir, "salt-minion.pex")} --config-dir {os.path.join(run_dir, "conf")}',
-        ]:
-            mock_hub.tunnel.asyncssh.cmd.assert_any_call(t_name, cmd)
-
-        for send in [
-                (minion_config, os.path.join(run_dir, 'conf', 'minion')),
-                (minion, os.path.join(run_dir, 'salt-minion.pex')),
-                (pytar, os.path.join(run_dir, 'py3.txz')),
-        ]:
-            mock_hub.tunnel.asyncssh.send.assert_any_call(t_name, *send)
 
         for tunnel in [
                 (44505, 4505),
