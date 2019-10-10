@@ -24,7 +24,7 @@ host_num_id:
 '''
 
 @pytest.fixture(scope='function')
-def hub():
+async def hub():
     '''
     Add required subs to the hub.
     '''
@@ -35,7 +35,7 @@ def hub():
 
     hub.pop.sub.add(dyne_name='rend')
     yield hub
-    hub.heist.init.clean()
+    await hub.heist.init.clean()
 
 @pytest.fixture
 def flat_roster():

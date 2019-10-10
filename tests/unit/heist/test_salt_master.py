@@ -77,20 +77,23 @@ class TestSaltMaster:
 
     @pytest.mark.parametrize('roster',
                              [{'publish_port': '4505'}])
+    @pytest.mark.parametrize('user',
+                             ['', 'heist'])
     @pytest.mark.asyncio
     async def test_single(self,
                           mock_hub: testing.MockHub,
                           remote: Dict[str, Dict[str, str]],
-                          mk_config_data: Tuple[str, str]):
+                          mk_config_data: Tuple[str, str],
+                          user):
         '''
         test heist.salt_master.single
         '''
         # Setup
-        artifacts_dir = 'art'
-        mock_hub.OPT = {'heist': {'artifacts_dir': artifacts_dir,
+        mock_hub.OPT = {'heist': {'artifacts_dir': 'art',
                                   'checkin_time': 1,
                                   'dynamic_upgrade': False}}
         mock_hub.heist.ROSTERS = {}
+        mock_hub.heist.CONS = {}
         minion_config, _, _ = mk_config_data
         mock_hub.heist.salt_master.mk_config.return_value = minion_config
         mock_hub.heist.salt_master.detect_os.return_value = 'linux'
@@ -101,11 +104,20 @@ class TestSaltMaster:
         t_name = secrets.token_hex()
 
         # Execute
+        remote['user'] = user
         with mock.patch.object(secrets, 'token_hex', lambda: t_name):
             with mock.patch.object(heist.heist.salt_master, '_start_minion', patch_asyncio):
                 # Raises an error here so we do not stay in while loop during test
                 with pytest.raises(InterruptedError):
                     await heist.heist.salt_master.single(mock_hub, remote)
+
+        # ensure the user is added to the run_dirs path
+        ret_cons = mock_hub.heist.CONS
+        run_dir = ret_cons[list(ret_cons.keys())[0]]['run_dir']
+        if not remote['user']:
+            assert 'root' in run_dir
+        else:
+            assert remote['user'] in run_dir
 
         # Verify
         mock_hub.tunnel.asyncssh.create.assert_called_once_with(t_name, remote)

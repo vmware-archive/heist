@@ -18,7 +18,6 @@ CONFIG = '''master: {master}
 master_port: {master_port}
 publish_port: {publish_port}
 root_dir: {root_dir}
-log_level: debug
 '''
 
 
@@ -221,7 +220,11 @@ async def single(hub, remote: Dict[str, Any]):
     # create tunnel
     t_name = secrets.token_hex()
     hub.heist.ROSTERS[t_name] = remote
-    run_dir = f'/var/tmp/heist/{secrets.token_hex()[:4]}'
+    user = hub.heist.ROSTERS[t_name].get('user')
+    if not user:
+        user = 'root'
+    run_dir = os.path.join(os.sep, 'var', 'tmp', f'heist_{user}',
+                           f'{secrets.token_hex()[:4]}')
     t_type = remote.get('tunnel', 'asyncssh')
     created = await getattr(hub, f'tunnel.{t_type}.create')(t_name, remote)
     if not created:
