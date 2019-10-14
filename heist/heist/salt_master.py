@@ -143,7 +143,7 @@ async def get_artifact(hub, t_name, t_type, art_dir, ver, data):
 
     # check to see if artifact already exists
     if hub.heist.salt_master.latest('salt', art_dir, version=ver):
-        log.info(f'The Salt artifact {bin} already exists')
+        log.info(f'The Salt artifact {ver} already exists')
         return True
 
     py_url = data['releases'][ver][0]['url']
@@ -166,32 +166,37 @@ async def get_artifact(hub, t_name, t_type, art_dir, ver, data):
     return True
 
 
-async def deploy(hub, t_name, t_type, bin, run_dir):
+async def deploy(hub, t_name, t_type, bin_, run_dir):
     '''
     Deploy the salt minion to the remote system
     '''
-    tgt = os.path.join(run_dir, os.path.basename(bin))
+    tgt = os.path.join(run_dir, os.path.basename(bin_))
     root_dir = os.path.join(run_dir, 'root')
     config = hub.heist.salt_master.mk_config(root_dir)
-    print(config)
+    conf_tgt = os.path.join(run_dir, 'conf', 'minion')
 
     # run salt deployment
     await getattr(hub, f'tunnel.{t_type}.cmd')(t_name, f'mkdir -p {os.path.join(run_dir, "conf")}')
     await getattr(hub, f'tunnel.{t_type}.cmd')(t_name, f'mkdir -p {os.path.join(run_dir, "root")}')
-    await getattr(hub, f'tunnel.{t_type}.send')(t_name, config, os.path.join(run_dir, 'conf', 'minion'))
-    await getattr(hub, f'tunnel.{t_type}.send')(t_name, bin, tgt)
+    try:
+        await getattr(hub, f'tunnel.{t_type}.send')(t_name, config, conf_tgt)
+    except Exception:
+        host = hub.heist.CONS[t_name]
+        log.error(f'Failed to send {config} to {t_name} at {conf_tgt}')
+        os.remove(config)
+    await getattr(hub, f'tunnel.{t_type}.send')(t_name, bin_, tgt)
     await getattr(hub, f'tunnel.{t_type}.cmd')(t_name, f'chmod +x {tgt}')
     os.remove(config)
     return tgt
 
 
-async def update(hub, t_name, t_type, bin, tgt, run_dir):
+async def update(hub, t_name, t_type, bin_, tgt, run_dir):
     '''
     Re-deploy the latest minion to the remote system
     '''
     # TODO: When updating clean out the old deployment
     await hub.heist.salt_master.clean(t_name)
-    tgt = await hub.heist.salt_master.deploy(t_name, t_type, bin, run_dir)
+    tgt = await hub.heist.salt_master.deploy(t_name, t_type, bin_, run_dir)
     hub.heist.CONS[t_name]['tgt'] = tgt
     await _start_minion(hub, t_type, t_name, tgt, run_dir)
 
@@ -225,13 +230,13 @@ async def single(hub, remote: Dict[str, Any]):
                                                  art_dir, ver=ver,
                                                  data=data)
     # Deploy
-    bin = hub.heist.salt_master.latest('salt', art_dir, version=ver)
-    tgt = await hub.heist.salt_master.deploy(t_name, t_type, bin, run_dir)
+    bin_ = hub.heist.salt_master.latest('salt', art_dir, version=ver)
+    tgt = await hub.heist.salt_master.deploy(t_name, t_type, bin_, run_dir)
     hub.heist.CONS[t_name] = {
         'run_dir': run_dir,
         't_type': t_type,
         'manager': 'salt_master',
-        'bin': bin,
+        'bin': bin_,
         'tgt': tgt}
     # Create tunnel back to master
     await getattr(hub, f'tunnel.{t_type}.tunnel')(t_name, 44505, 4505)
@@ -242,6 +247,6 @@ async def single(hub, remote: Dict[str, Any]):
         await asyncio.sleep(hub.OPT['heist']['checkin_time'])
         if hub.OPT['heist']['dynamic_upgrade']:
             latest = hub.heist.salt_master.latest('salt', art_dir)
-            if latest != bin:
-                bin = latest
+            if latest != bin_:
+                bin_ = latest
                 await hub.heist.salt_master.update(t_name, t_type, latest, tgt, run_dir)
