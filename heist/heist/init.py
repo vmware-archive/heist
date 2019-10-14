@@ -45,6 +45,8 @@ async def run(hub):
     roster = hub.OPT['heist']['roster']
     remotes = await hub.roster.init.read(roster)
     manager = hub.OPT['heist']['manager']
+    if not remotes:
+        return False
     await getattr(hub, f'heist.{manager}.run')(remotes)
 
 
