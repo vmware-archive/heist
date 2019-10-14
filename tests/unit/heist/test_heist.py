@@ -39,12 +39,26 @@ class TestSaltMaster:
     @pytest.mark.asyncio
     async def test_run(self, mock_hub: testing.MockHub):
         mock_hub.OPT = {'heist': {'roster': mock.sentinel.roster, 'manager': 'salt_master'}}
-        mock_hub.roster.init.read.return_value = {}
+        mock_hub.roster.init.read.return_value = {'id': {'host': 'test'}}
 
         await heist.heist.init.run(mock_hub)
 
         mock_hub.roster.init.read.assert_called_with(mock.sentinel.roster)
         mock_hub.heist.salt_master.run.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_run_roster_false(self, mock_hub: testing.MockHub):
+        '''
+        test heist.heist.init when roster does not render correctly
+        '''
+        mock_hub.OPT = {'heist': {'roster': mock.sentinel.roster, 'manager': 'salt_master'}}
+        mock_hub.roster.init.read.return_value = False
+
+        await heist.heist.init.run(mock_hub)
+
+        mock_hub.roster.init.read.assert_called_with(mock.sentinel.roster)
+        mock_hub.heist.salt_master.run.assert_not_called()
+
 
     @pytest.mark.parametrize('addr',
                              [('127.0.0.1', True),
@@ -53,7 +67,7 @@ class TestSaltMaster:
                               ('localhost', True),
                               ('1.1.1.1', False),
                               ('google.com', False)])
-    def test_ip_is_loopback_exception(self, addr, mock_hub):
+    def test_ip_is_loopback(self, addr, mock_hub):
         '''
         Test for function ip_is_loopback
         when socket error raised, expected
@@ -62,7 +76,7 @@ class TestSaltMaster:
         ret = heist.heist.init.ip_is_loopback(mock_hub, addr[0])
         assert ret == addr[1]
 
-    def test_ip_is_loopback(self, mock_hub):
+    def test_ip_is_loopback_exception(self, mock_hub):
         '''
         Test for function ip_is_loopback
         when address is not valid
