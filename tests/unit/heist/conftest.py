@@ -19,7 +19,7 @@ import pop
 import pop.utils.testing as testing
 
 @pytest.fixture(scope='function')
-def hub():
+async def hub():
     '''
     Add required subs to the hub.
     '''
@@ -30,7 +30,7 @@ def hub():
 
     hub.pop.sub.add(dyne_name='tunnel')
     yield hub
-    hub.heist.init.clean()
+    await hub.heist.init.clean()
 
 @pytest.fixture
 def mock_hub() -> testing.MockHub:

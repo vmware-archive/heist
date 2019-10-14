@@ -14,7 +14,7 @@ from typing import Any, Dict, List
 
 log = logging.getLogger(__name__)
 
-CONFIG = '''master: 127.0.0.1
+CONFIG = '''master: {master}
 master_port: {master_port}
 publish_port: {publish_port}
 root_dir: {root_dir}
@@ -52,14 +52,23 @@ async def run(hub, remotes: List[Dict[str, Any]]):
     await asyncio.gather(*coros)
 
 
-def mk_config(hub, root_dir: str):
+def mk_config(hub, root_dir: str, t_name):
     '''
     Create a minion config to use with this execution and return the file path
     for said config
     '''
     _, path = tempfile.mkstemp()
+    roster = hub.heist.ROSTERS[t_name]
+    master = roster.get('master', '127.0.0.1')
+
+    if not roster.get('bootstrap') and not hub.heist.init.ip_is_loopback(master):
+        roster['bootstrap'] = True
+
     with open(path, 'w+') as wfp:
-        wfp.write(CONFIG.format(master_port=44506, publish_port=44505, root_dir=root_dir))
+        wfp.write(CONFIG.format(master=master,
+                                master_port=roster.get('master_port', 44506),
+                                publish_port=roster.get('publish_port', 44505),
+                                root_dir=root_dir))
     return path
 
 
@@ -172,7 +181,7 @@ async def deploy(hub, t_name, t_type, bin_, run_dir):
     '''
     tgt = os.path.join(run_dir, os.path.basename(bin_))
     root_dir = os.path.join(run_dir, 'root')
-    config = hub.heist.salt_master.mk_config(root_dir)
+    config = hub.heist.salt_master.mk_config(root_dir, t_name)
     conf_tgt = os.path.join(run_dir, 'conf', 'minion')
 
     # run salt deployment
@@ -216,7 +225,12 @@ async def single(hub, remote: Dict[str, Any]):
     '''
     # create tunnel
     t_name = secrets.token_hex()
-    run_dir = f'/var/tmp/heist/{secrets.token_hex()[:4]}'
+    hub.heist.ROSTERS[t_name] = remote
+    user = hub.heist.ROSTERS[t_name].get('user')
+    if not user:
+        user = 'root'
+    run_dir = os.path.join(os.sep, 'var', 'tmp', f'heist_{user}',
+                           f'{secrets.token_hex()[:4]}')
     t_type = remote.get('tunnel', 'asyncssh')
     created = await getattr(hub, f'tunnel.{t_type}.create')(t_name, remote)
     if not created:
@@ -239,8 +253,9 @@ async def single(hub, remote: Dict[str, Any]):
         'bin': bin_,
         'tgt': tgt}
     # Create tunnel back to master
-    await getattr(hub, f'tunnel.{t_type}.tunnel')(t_name, 44505, 4505)
-    await getattr(hub, f'tunnel.{t_type}.tunnel')(t_name, 44506, 4506)
+    if not hub.heist.ROSTERS[t_name].get('bootstrap'):
+        await getattr(hub, f'tunnel.{t_type}.tunnel')(t_name, 44505, 4505)
+        await getattr(hub, f'tunnel.{t_type}.tunnel')(t_name, 44506, 4506)
     # Start minion
     await _start_minion(hub, t_type, t_name, tgt, run_dir)
     while True:

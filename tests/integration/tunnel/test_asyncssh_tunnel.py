@@ -51,11 +51,11 @@ def spawn_server(sftp_port: int, pid_file: str, **kwargs) -> subprocess.Popen:
     :return: A subprocess Pipe to the process
     '''
     server_cmd = [
-                     sys.executable,
-                     sftp_server.__file__,
-                     f'--sftp-port={sftp_port}',
-                     f'--pid-file={pid_file}',
-                 ] + [f'--{key.replace("_", "-")}={value}' for key, value in kwargs.items()]
+        sys.executable,
+        sftp_server.__file__,
+        f'--sftp-port={sftp_port}',
+        f'--pid-file={pid_file}',
+        ] + [f'--{key.replace("_", "-")}={value}' for key, value in kwargs.items()]
     print(' '.join(server_cmd))
     process = subprocess.Popen(server_cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
 
@@ -95,7 +95,7 @@ def sftp_root() -> tempfile.TemporaryDirectory:
 
 
 @pytest.fixture(scope='function')
-def hub() -> Hub:
+async def hub() -> Hub:
     hub = Hub()
     hub.OPT = {'heist': {}}
     with mock.patch.object(sys, 'argv', sys.argv[:1]):
@@ -103,7 +103,7 @@ def hub() -> Hub:
 
     hub.pop.sub.add(dyne_name='tunnel')
     yield hub
-    hub.heist.init.clean()
+    await hub.heist.init.clean()
 
 
 @pytest.fixture(scope='function')
