@@ -11,10 +11,10 @@ Setting up Salt With Heist
 ==========================
 
 This tutorial will go over how to set up Heist to manage ephemeral Salt
-Minions. The whole point of Heist is  to make deployment and management
+Minions. The whole point of Heist is to make deployment and management
 of Salt easy!
 
-Using Heist is very easy, Start by downloading Heist. Just install if via
+Using Heist is very easy, Start by downloading Heist. Just install via
 `pip`:
 
 .. code-block:: bash
@@ -28,12 +28,24 @@ Don't worry, this is a snap!  Once Heist is installed you will need a
 Salt Master to connect to. If you have an existing Salt Master running
 you can skip this section.
 
-Download the all-in-one Salt binary for Linux (Windows and Mac coming soon!):
+Download the all-in-one Salt binary for Linux (Windows coming soon!):
+
+For Linux:
 
 .. code-block:: bash
 
-    wget https://repo.saltstack.com/salt-bin/linux/salt-2019.2.2
+    wget https://repo.saltstack.com/salt-bin/linux/salt
 
+For Mac:
+
+.. code-block:: bash
+
+    wget https://repo.saltstack.com/salt-bin/osx/salt
+
+.. note::
+
+    If you want to verify the file, various checksums are located inside the
+    repo file: https://repo.saltstack.com/salt-bin/repo.json
 
 Now you can just run it!
 
