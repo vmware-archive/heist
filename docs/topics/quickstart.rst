@@ -51,7 +51,16 @@ Now you can just run it!
 
 .. code-block:: bash
 
-    ./salt-2019.2.2 master
+    ./salt master
+
+.. note::
+
+    This binary contains all of the salt commands that typically ship with
+    packages of salt. instead of running `salt-call` run `salt call`, instead
+    of running `salt-minion` run `salt minion`. Running `salt` maps directly
+    to running `salt` normally. Please be aware that the single binary of salt
+    is a little slower to start than a standard install of salt, but once it is
+    running it should run just as fast as a standard install of salt.
 
 Now you have a running Salt Master to control your minions!
 
@@ -80,3 +89,6 @@ That's it! Now you can run Heist to deploy a salt minion and have it connect to
 your master! Now that it is connected you can run remote execution and
 configuration management routines to your heart's delight using the salt
 binary you just downloaded.
+
+This example is very simple, heist support virtually all available authentication
+options for ssh.
