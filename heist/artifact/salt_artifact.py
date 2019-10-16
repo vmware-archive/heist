@@ -1,10 +1,13 @@
 '''
     artifact module to manage the download of salt artifacts
 '''
-import aiohttp
+# Import python libs
 from distutils.version import LooseVersion
 import logging
 import os
+
+# Import 3rd party libs
+import aiohttp
 
 __virtualname__ = 'salt'
 
@@ -25,19 +28,6 @@ async def fetch(hub, session, url, download=False, location=False):
             return await resp.json()
         log.critical(f'Cannot query url {url}. Returncode {resp.status} returned')
         return False
-
-async def detect_os(hub, t_name, t_type):
-    '''
-    Detect the os on the target system
-    '''
-    ret = await getattr(hub, f'tunnel.{t_type}.cmd')(t_name, 'uname -a')
-    if ret.returncode == 0:
-        if ret.stdout.lower().startswith('linux'):
-            return 'linux'
-        elif ret.stdout.lower().startswith('darwin'):
-            return 'darwin'
-    log.critical('Could not determine the OS')
-    return False
 
 async def get_version(hub, t_os):
     '''

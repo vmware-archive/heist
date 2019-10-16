@@ -39,6 +39,20 @@ async def _start_minion(hub, t_type, t_name, tgt, run_dir):
     await asyncio.sleep(0)
 
 
+async def detect_os(hub, t_name, t_type):
+    '''
+    Detect the os on the target system
+    '''
+    ret = await getattr(hub, f'tunnel.{t_type}.cmd')(t_name, 'uname -a')
+    if ret.returncode == 0:
+        if ret.stdout.lower().startswith('linux'):
+            return 'linux'
+        elif ret.stdout.lower().startswith('darwin'):
+            return 'darwin'
+    log.critical('Could not determine the OS')
+    return False
+
+
 async def run(hub, remotes: List[Dict[str, Any]]):
     '''
     This plugin creates the salt specific tunnel, and then starts the remote
@@ -153,7 +167,7 @@ async def single(hub, remote: Dict[str, Any]):
     if not created:
         log.error(f'Connection to host {remote["host"]} failed')
         return
-    t_os = await getattr(hub, f'artifact.{a_type}.detect_os')(t_name, t_type)
+    t_os = await hub.heist.salt_master.detect_os(t_name, t_type)
     art_dir = os.path.join(hub.OPT['heist']['artifacts_dir'], t_os)
     ver = await getattr(hub, f'artifact.{a_type}.get_version')(t_os)
     if ver:
