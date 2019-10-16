@@ -4,10 +4,8 @@
 # Import python libs
 import secrets
 import asyncio
-import aiohttp
 import logging
 import os
-import tarfile
 import tempfile
 from distutils.version import StrictVersion
 from typing import Any, Dict, List
@@ -39,6 +37,20 @@ async def _start_minion(hub, t_type, t_name, tgt, run_dir):
     hub.heist.salt_master.FUTURES[t_name] = future
     # Call an await to give the future a chance to run
     await asyncio.sleep(0)
+
+
+async def detect_os(hub, t_name, t_type):
+    '''
+    Detect the os on the target system
+    '''
+    ret = await getattr(hub, f'tunnel.{t_type}.cmd')(t_name, 'uname -a')
+    if ret.returncode == 0:
+        if ret.stdout.lower().startswith('linux'):
+            return 'linux'
+        elif ret.stdout.lower().startswith('darwin'):
+            return 'darwin'
+    log.critical('Could not determine the OS')
+    return False
 
 
 async def run(hub, remotes: List[Dict[str, Any]]):
@@ -91,88 +103,6 @@ def latest(hub, name: str, a_dir: str, version=False):
             return os.path.join(a_dir, paths[version])
         return False
     return os.path.join(a_dir, paths[names[-1]])
-
-
-async def detect_os(hub, t_name, t_type):
-    '''
-    Detect the os on the target system
-    '''
-    ret = await getattr(hub, f'tunnel.{t_type}.cmd')(t_name, 'uname -a')
-    if ret.returncode == 0:
-        if ret.stdout.lower().startswith('linux'):
-            return 'linux'
-        elif ret.stdout.lower().startswith('darwin'):
-            return 'darwin'
-    log.critical('Could not determine the OS')
-    return False
-
-
-async def fetch(hub, session, url, download=False, location=False):
-    '''
-    Fetch a url and return json. If downloading artifact
-    return the download location.
-    '''
-    async with session.get(url) as resp:
-        if resp.status == 200:
-            if download:
-                with open(location, 'wb') as fn_:
-                    fn_.write(await resp.read())
-                return location
-            return await resp.json()
-        log.critical(f'Cannot query url {url}. Returncode {resp.status} returned')
-        return False
-
-
-async def get_version_pypi(hub, t_os):
-    '''
-    Query version and data from pypi api
-    '''
-    ver = hub.OPT['heist'].get('artifact_version')
-    if t_os == 'linux':
-        url = 'https://pypi.python.org/pypi/saltbin/json'
-
-    async with aiohttp.ClientSession() as session:
-        data = await hub.heist.salt_master.fetch(session, url)
-        if not data:
-            log.critical(f'Query to pypi failed, falling back to'
-                         f'pre-downloaded artifacts')
-            return False, data
-        if not ver:
-            # we did not set version so query latest version from pypi
-            ver = list(data['releases'].keys())[-1]
-        return ver, data
-
-
-async def get_artifact(hub, t_name, t_type, art_dir, ver, data):
-    '''
-    Dowlnoad artifact if does not already exist. If artifact
-    version is not specified, download the latest from pypi
-    '''
-    await getattr(hub, f'tunnel.{t_type}.cmd')(t_name, f'mkdir -p {art_dir}')
-
-    # check to see if artifact already exists
-    if hub.heist.salt_master.latest('salt', art_dir, version=ver):
-        log.info(f'The Salt artifact {ver} already exists')
-        return True
-
-    py_url = data['releases'][ver][0]['url']
-    tar_n = os.path.basename(py_url)
-    tar_l = os.path.join(art_dir, tar_n)
-
-    # download and untar release tar ball
-    async with aiohttp.ClientSession() as session:
-        log.info(f'Downloading the artifact {tar_n} to {tar_l}')
-        tar_f = await hub.heist.salt_master.fetch(session, py_url,
-                                                  download=True, location=tar_l)
-    tf = tarfile.open(tar_f)
-    tf.extractall(path=art_dir)
-    os.remove(tar_l)
-    os.remove(os.path.join(art_dir, 'PKG-INFO'))
-    if not any(ver in x for x in os.listdir(art_dir)):
-        log.critical(f'Did not find the {ver} artifact in {art_dir}.'
-                     f' Untarring the artifact failed or did not include version')
-        return False
-    return True
 
 
 async def deploy(hub, t_name, t_type, bin_, run_dir):
@@ -232,17 +162,17 @@ async def single(hub, remote: Dict[str, Any]):
     run_dir = os.path.join(os.sep, 'var', 'tmp', f'heist_{user}',
                            f'{secrets.token_hex()[:4]}')
     t_type = remote.get('tunnel', 'asyncssh')
+    a_type = remote.get('artifact', 'salt')
     created = await getattr(hub, f'tunnel.{t_type}.create')(t_name, remote)
     if not created:
         log.error(f'Connection to host {remote["host"]} failed')
         return
     t_os = await hub.heist.salt_master.detect_os(t_name, t_type)
     art_dir = os.path.join(hub.OPT['heist']['artifacts_dir'], t_os)
-    ver, data = await hub.heist.salt_master.get_version_pypi(t_os)
-    if data:
-        await hub.heist.salt_master.get_artifact(t_name, t_type,
-                                                 art_dir, ver=ver,
-                                                 data=data)
+    ver = await getattr(hub, f'artifact.{a_type}.get_version')(t_os)
+    if ver:
+        await getattr(hub, f'artifact.{a_type}.get_artifact')(t_name, t_type,
+                                                              art_dir, t_os, ver=ver)
     # Deploy
     bin_ = hub.heist.salt_master.latest('salt', art_dir, version=ver)
     tgt = await hub.heist.salt_master.deploy(t_name, t_type, bin_, run_dir)

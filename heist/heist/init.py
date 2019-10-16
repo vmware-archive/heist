@@ -22,6 +22,7 @@ def load_subs(hub):
     '''
     Load up the needed subs
     '''
+    hub.pop.sub.add(dyne_name='artifact')
     hub.pop.sub.add(dyne_name='roster')
     hub.pop.sub.add(dyne_name='tunnel')
     hub.pop.sub.add(dyne_name='rend')
@@ -58,8 +59,8 @@ async def clean(hub, signal: int = None):
         log.warning(f'Got signal {signal}! Cleaning up connections')
     coros = []
     # First clean up the remote systems
-    for t_name, vals in hub.heist.ROSTERS.items():
-        if not vals.get('bootstrap'):
+    for _, r_vals in hub.heist.ROSTERS.items():
+        if not r_vals.get('bootstrap'):
             for t_name, vals in hub.heist.CONS.items():
                 manager = vals['manager']
                 coros.append(getattr(hub, f'heist.{manager}.clean')(t_name))

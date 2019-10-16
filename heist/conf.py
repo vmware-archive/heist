@@ -75,4 +75,5 @@ DYNE = {
         'heist': ['heist'],
         'tunnel': ['tunnel'],
         'roster': ['roster'],
+        'artifact': ['artifact'],
         }

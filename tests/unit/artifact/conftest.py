@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
-    tests.unit.heist.conftest
+    tests.unit.artifact.conftest
     ~~~~~~~~~~~~~~
 
-    Setup fixtures specifically for the heist unit tests
+    Setup fixtures specifically for the artifact unit tests
 '''
 
 # Import python libs
@@ -28,7 +28,6 @@ async def hub():
     with mock.patch.object(sys, 'argv', sys.argv[:1]):
         hub.pop.sub.add('heist.heist')
 
-    hub.pop.sub.add(dyne_name='tunnel')
     hub.pop.sub.add(dyne_name='artifact')
     yield hub
     await hub.heist.init.clean()
