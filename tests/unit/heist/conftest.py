@@ -29,6 +29,7 @@ async def hub():
         hub.pop.sub.add('heist.heist')
 
     hub.pop.sub.add(dyne_name='tunnel')
+    hub.pop.sub.add(dyne_name='artifact')
     yield hub
     await hub.heist.init.clean()
 
@@ -38,4 +39,4 @@ def mock_hub() -> testing.MockHub:
     mock the needed subs for the heist tests
     '''
     # A fixture is required for asynchronous tests to access a mock_hub
-    return helpers.mock_hub(subs=['heist.heist', 'roster', 'tunnel'])
+    return helpers.mock_hub(subs=['heist.heist', 'roster', 'tunnel', 'artifact'])

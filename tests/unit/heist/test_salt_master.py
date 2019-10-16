@@ -7,6 +7,7 @@ from typing import Any, Dict, Tuple
 
 # Import Local libs
 import heist.heist.salt_master
+import heist.artifact.salt_artifact
 import heist.tunnel.asyncssh_tunnel
 
 # Import 3rd-party libs
@@ -14,7 +15,6 @@ import asyncssh.process
 import mock
 import pop.utils.testing as testing
 import pytest
-import tarfile
 
 
 @pytest.fixture
@@ -96,8 +96,8 @@ class TestSaltMaster:
         mock_hub.heist.CONS = {}
         minion_config, _, _ = mk_config_data
         mock_hub.heist.salt_master.mk_config.return_value = minion_config
-        mock_hub.heist.salt_master.detect_os.return_value = 'linux'
-        mock_hub.heist.salt_master.get_version_pypi.return_value = ('2019.2.1', {})
+        mock_hub.artifact.salt.detect_os.return_value = 'linux'
+        mock_hub.artifact.salt.get_version.return_value = ('2019.2.1', {})
         patch_asyncio = mock.Mock(asyncio.sleep)
         patch_asyncio.side_effect = [InterruptedError]
         # We need to know exactly what the token hex will be, patch it's call
@@ -145,8 +145,7 @@ class TestSaltMaster:
         # Setup
         t_name = secrets.token_hex()
         mock_hub.tunnel.asyncssh.cmd.return_value = cmd_ret
-        ret = await heist.heist.salt_master.detect_os(mock_hub, t_name,
-                                                      'asyncssh')
+        ret = await heist.artifact.salt_artifact.detect_os(mock_hub, t_name, 'asyncssh')
         assert ret == 'linux'
 
     @pytest.mark.asyncio
@@ -166,22 +165,39 @@ class TestSaltMaster:
         # Setup
         t_name = secrets.token_hex()
         mock_hub.tunnel.asyncssh.cmd.return_value = cmd_ret
-        ret = await heist.heist.salt_master.detect_os(mock_hub, t_name,
-                                                      'asyncssh')
+        ret = await heist.artifact.salt_artifact.detect_os(mock_hub, t_name,
+                                                           'asyncssh')
         assert not ret
 
     @pytest.mark.asyncio
-    async def test_get_version_pypi(self,
-                                    hub):
+    async def test_get_version(self,
+                               mock_hub):
         '''
         test heist.heist.salt_master.get_version_pypi
         with artifact_version set
         '''
         saltbin = '2019.2.1'
-        hub.OPT = {'heist': {'artifact_version': '2019.2.1'}}
-        ver, data = await heist.heist.salt_master.get_version_pypi(hub, 'linux')
+        mock_hub.OPT = {'heist': {'artifact_version': '2019.2.1'}}
+        ver = await heist.artifact.salt_artifact.get_version(mock_hub, 'linux')
+        mock_hub.artifact.salt.fetch.assert_not_called()
         assert ver == saltbin
-        assert saltbin in data['releases']
+
+    @pytest.mark.asyncio
+    async def test_get_version_latest(self,
+                                      mock_hub):
+        '''
+        test heist.heist.salt_master.get_version_pypi
+        with artifact_version not set and returns latest
+        '''
+        mock_hub.OPT = {'heist': {'artifact_version': ''}}
+        data = {'linux': {'salt-2019.2.1': {'version': '2019.2.1'},
+                          'salt-2019.2.3': {'version': '2019.2.3'},
+                          'salt-2019.2.2': {'version': '2019.2.2'}}}
+        mock_hub.artifact.salt.fetch.return_value = data
+
+        ver = await heist.artifact.salt_artifact.get_version(mock_hub, 'linux')
+        mock_hub.artifact.salt.fetch.assert_called()
+        assert ver == '2019.2.3'
 
     @pytest.mark.asyncio
     async def test_get_artifact(self,
@@ -193,24 +209,34 @@ class TestSaltMaster:
         '''
         t_name = secrets.token_hex()
         ver = '2019.2.1'
-        tar_f = f'salt-{ver}.tar.gz'
-        data = {'releases': {ver: {0: {'url': f'https://pypi.org/project/saltbin/{tar_f}'}}}}
 
-        # create test tar file
-        files = ['PKG-INFO', f'salt-{ver}']
-        tar_l = os.path.join(tmp_path, f'salt-{ver}.tar.gz')
+        art_l = os.path.join(tmp_path, f'salt-{ver}')
+        os.mknod(art_l)
 
-        with tarfile.open(tar_l, 'w:gz') as tar:
-            for fn_ in files:
-                tmp = tmp_path / fn_
-                tmp.write_text(f'test-info for {fn_}')
-                tar.add(tmp, arcname=os.path.basename(tmp))
-
-        [os.remove(os.path.join(tmp_path, x)) for x in files]
-
-        mock_hub.heist.salt_master.fetch.return_value = tar_l
+        mock_hub.artifact.salt.fetch.return_value = art_l
         mock_hub.heist.salt_master.latest.return_value = False
-        ret = await heist.heist.salt_master.get_artifact(mock_hub, t_name,
-                                                         'asyncssh', tmp_path,
-                                                         ver, data)
+        ret = await heist.artifact.salt_artifact.get_artifact(mock_hub, t_name,
+                                                              'asyncssh', tmp_path,
+                                                              'linux', ver)
         assert ret
+
+    @pytest.mark.asyncio
+    async def test_get_artifact_exists(self,
+                                       mock_hub: testing.MockHub,
+                                       tmp_path):
+        '''
+        test heist.salt_master.get_artifact
+        when artifact already exists
+        '''
+        t_name = secrets.token_hex()
+        ver = '2019.2.1'
+
+        art_l = os.path.join(tmp_path, f'salt-{ver}')
+
+        mock_hub.artifact.salt.fetch.return_value = art_l
+        mock_hub.heist.salt_master.latest.return_value = True
+        ret = await heist.artifact.salt_artifact.get_artifact(mock_hub, t_name,
+                                                              'asyncssh', tmp_path,
+                                                              'linux', ver)
+        assert ret
+        mock_hub.artifact.salt.fetch.assert_not_called()
