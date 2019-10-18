@@ -1,4 +1,7 @@
 #!/usr/bin/python3
+'''
+    unit tests for heist.heist.salt_master
+'''
 # Import Python libs
 import asyncio
 import os
@@ -166,3 +169,122 @@ class TestSaltMaster:
         ret = await heist.heist.salt_master.detect_os(mock_hub, t_name,
                                                       'asyncssh')
         assert not ret
+
+    @pytest.mark.asyncio
+    async def test_get_start_cmd(self,
+                                 mock_hub: testing.MockHub):
+        '''
+        test heist.heist.salt_master._get_start_cmd when systemctl exists
+        '''
+        # Setup
+        t_name = secrets.token_hex()
+        run_dir = os.path.join(os.sep, 'var', 'tmp', 'test')
+        mock_hub.heist.ROSTERS[t_name]['bootstrap'] = True
+        cmd_ret = asyncssh.process.SSHCompletedProcess(
+            command={'which systemctl'},
+            exit_status=0,
+            returncode=0,
+            stdout='/usr/bin/systemctl',
+            stderr='')
+
+        mock_hub.tunnel.asyncssh.cmd.return_value = cmd_ret
+
+        ret = await heist.heist.salt_master._get_start_cmd(mock_hub, 'asyncssh', t_name,
+                                                           os.path.join(run_dir, 'salt-2019.2.2'),
+                                                           run_dir, os.path.join(run_dir, 'pfile'))
+        assert ret == 'systemctl start salt-minion'
+
+    @pytest.mark.asyncio
+    async def test_get_start_cmd_at(self,
+                                    mock_hub: testing.MockHub):
+        '''
+        test heist.heist.salt_master._get_start_cmd when systemctl
+        does not exist but at does
+        '''
+        # Setup
+        t_name = secrets.token_hex()
+        run_dir = os.path.join(os.sep, 'var', 'tmp', 'test')
+        mock_hub.heist.ROSTERS[t_name]['bootstrap'] = True
+        sys_ret = asyncssh.process.SSHCompletedProcess(
+            command={'which systemctl'},
+            exit_status=1,
+            returncode=1,
+            stdout='',
+            stderr='systemctl not found')
+        at_ret = asyncssh.process.SSHCompletedProcess(
+            command={'which at'},
+            exit_status=0,
+            returncode=0,
+            stdout='/usr/bin/at',
+            stderr='')
+
+
+        mock_hub.tunnel.asyncssh.cmd.side_effect = [sys_ret, at_ret]
+
+        ret = await heist.heist.salt_master._get_start_cmd(mock_hub, 'asyncssh', t_name,
+                                                           os.path.join(run_dir, 'salt-2019.2.2'),
+                                                           run_dir, os.path.join(run_dir, 'pfile'))
+        assert ret == f'at -f {run_dir}/at-minion-scheduler.sh now + 1 minute'
+
+    @pytest.mark.asyncio
+    async def test_get_start_cmd_not_exist(self,
+                                           mock_hub: testing.MockHub):
+        '''
+        test heist.heist.salt_master._get_start_cmd when systemctl
+        and at do not exist
+        '''
+        # Setup
+        t_name = secrets.token_hex()
+        run_dir = os.path.join(os.sep, 'var', 'tmp', 'test')
+        mock_hub.heist.ROSTERS[t_name]['bootstrap'] = True
+        sys_ret = asyncssh.process.SSHCompletedProcess(
+            command={'which systemctl'},
+            exit_status=1,
+            returncode=1,
+            stdout='',
+            stderr='systemctl not found')
+        at_ret = asyncssh.process.SSHCompletedProcess(
+            command={'which at'},
+            exit_status=1,
+            returncode=1,
+            stdout='',
+            stderr='at not found')
+        mock_hub.tunnel.asyncssh.cmd.side_effect = [sys_ret, at_ret]
+
+        ret = await heist.heist.salt_master._get_start_cmd(mock_hub, 'asyncssh', t_name,
+                                                           os.path.join(run_dir, 'salt-2019.2.2'),
+                                                           run_dir, os.path.join(run_dir, 'pfile'))
+        assert ret == f' {run_dir}/salt-2019.2.2 minion '\
+                      f'--config-dir {run_dir}/conf --pid-file={run_dir}/pfile'
+
+
+    def test_mk_startup_conf_systemctl(self,
+                                       mock_hub: testing.MockHub):
+        '''
+        test heist.heist.salt_master.mk_startup_conf when cmd is systemctl
+        '''
+        # Setup
+        run_dir = os.path.join(os.sep, 'var', 'tmp', 'test')
+
+        path = heist.heist.salt_master.mk_startup_conf(mock_hub, 'systemctl',
+                                                       os.path.join(run_dir, 'salt-2019.2.2'),
+                                                       run_dir, os.path.join(run_dir, 'pfile'))
+        with open(path, 'r') as _fp:
+            content = _fp.read()
+        assert '[Unit]\nDescription=The Salt Minion' in content
+
+    def test_mk_startup_conf_at(self,
+                                mock_hub: testing.MockHub):
+        '''
+        test heist.heist.salt_master.mk_startup_conf when cmd is at
+        '''
+        # Setup
+        run_dir = os.path.join(os.sep, 'var', 'tmp', 'test')
+
+        path = heist.heist.salt_master.mk_startup_conf(mock_hub, 'at',
+                                                       os.path.join(run_dir, 'salt-2019.2.2'),
+                                                       run_dir, os.path.join(run_dir, 'pfile'))
+        with open(path, 'r') as _fp:
+            content = _fp.read()
+        assert '[Unit]\nDescription=The Salt Minion' not in content
+        assert f'{run_dir}/salt-2019.2.2 minion' in content

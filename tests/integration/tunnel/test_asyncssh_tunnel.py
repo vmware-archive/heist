@@ -177,7 +177,7 @@ class TestAsyncSSH:
         assert hub.tunnel.asyncssh.CONS[name].get('sftp')
 
         # Cleanup, since nothing was accessed the connection will be hanging
-        hub.tunnel.asyncssh.destroy(name)
+        await hub.tunnel.asyncssh.destroy(name)
 
     @pytest.mark.asyncio
     async def test_send(self, hub: Hub, basic_sftp_server: Tuple[int, str, str], temp_dir: str):

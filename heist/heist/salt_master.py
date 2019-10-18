@@ -18,6 +18,22 @@ publish_port: {publish_port}
 root_dir: {root_dir}
 '''
 
+SYSTEMD_CONF = '''[Unit]
+Description=The Salt Minion
+Documentation=man:salt-minion(1) file:///usr/share/doc/salt/html/contents.html https://docs.saltstack.com/en/latest/contents.html
+After=network.target salt-master.service
+
+[Service]
+KillMode=process
+Type=notify
+NotifyAccess=all
+LimitNOFILE=8192
+ExecStart={tgt} minion --config-dir {conf} --pid-file={pfile}
+
+[Install]
+WantedBy=multi-user.target
+'''
+
 
 def __init__(hub):
     '''
@@ -26,14 +42,40 @@ def __init__(hub):
     hub.heist.salt_master.FUTURES = {}
 
 
+async def _get_start_cmd(hub, t_type, t_name, tgt, run_dir, pfile):
+    '''
+    determine which command to use when starting the salt-minion
+    '''
+    at_f = os.path.join(run_dir, 'at-minion-scheduler.sh')
+    startup = {'systemctl': {'conf_tgt': os.path.join(os.sep, 'etc',
+                                                      'systemd', 'system',
+                                                      'salt-minion.service'),
+                             'conf': 'systemd',
+                             'start_cmd': 'systemctl start salt-minion'},
+               'at': {'conf_tgt': at_f,
+                      'conf': 'at',
+                      'start_cmd': f'at -f {at_f} now + 1 minute'}}
+    if hub.heist.ROSTERS[t_name].get('bootstrap'):
+        for cmd in startup:
+            ret = await getattr(hub, f'tunnel.{t_type}.cmd')(t_name, f'which {cmd}')
+            if ret.returncode == 0:
+                log.debug(f'Using {cmd} to startup the minion service')
+                config = hub.heist.salt_master.mk_startup_conf(cmd, tgt, run_dir, pfile)
+                conf_tgt = startup[cmd]['conf_tgt']
+                await getattr(hub, f'tunnel.{t_type}.send')(t_name, config, conf_tgt)
+                return startup[cmd]['start_cmd']
+    return f' {tgt} minion --config-dir {os.path.join(run_dir, "conf")} --pid-file={pfile}'
+
+
 async def _start_minion(hub, t_type, t_name, tgt, run_dir):
     '''
     Start a minion on the remote system and store the future
     '''
     pfile = os.path.join(run_dir, 'pfile')
+    cmd = await _get_start_cmd(hub, t_type, t_name, tgt, run_dir, pfile)
+
     future = asyncio.ensure_future(getattr(hub, f'tunnel.{t_type}.cmd')(
-        t_name,
-        f' {tgt} minion --config-dir {os.path.join(run_dir, "conf")} --pid-file={pfile}'))
+        t_name, cmd))
     hub.heist.salt_master.FUTURES[t_name] = future
     # Call an await to give the future a chance to run
     await asyncio.sleep(0)
@@ -62,6 +104,25 @@ async def run(hub, remotes: List[Dict[str, Any]]):
     for remote in remotes:
         coros.append(hub.heist.salt_master.single(remote))
     await asyncio.gather(*coros)
+
+
+def mk_startup_conf(hub, cmd, tgt, run_dir, pfile):
+    '''
+    Manage the file that will be used to startup the salt-minion service
+    '''
+    _, path = tempfile.mkstemp()
+
+    if cmd == 'systemctl':
+        with open(path, 'w+') as wfp:
+            wfp.write(SYSTEMD_CONF.format(tgt=tgt,
+                                          conf=os.path.join(run_dir, "conf"),
+                                          pfile=pfile))
+    elif cmd == 'at':
+        with open(path, 'w+') as wfp:
+            wfp.write(f'{tgt} minion --config-dir {os.path.join(run_dir, "conf")} --pid-file={pfile}')
+        return path
+
+    return path
 
 
 def mk_config(hub, root_dir: str, t_name):
