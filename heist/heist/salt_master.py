@@ -16,7 +16,6 @@ CONFIG = '''master: {master}
 master_port: {master_port}
 publish_port: {publish_port}
 root_dir: {root_dir}
-log_level: trace
 '''
 
 SYSTEMD_CONF = '''[Unit]
