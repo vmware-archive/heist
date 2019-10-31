@@ -17,6 +17,11 @@ CLI_CONFIG = {
         'default': '/etc/heist/rosters',
         'help': 'The directory to look for rosters',
         },
+    'roster_file': {
+        'options': ['-R'],
+        'default': '',
+        'help': 'Use a specific roster file, if this option is not used then the roster_dir will be used to find roster files',
+        },
     'manager': {
         'default': 'salt_master',
         'help': 'The type of manager to use. The manager determines how you want to create the tunnels and if you want to deploy ephemeral agents to the remote systems',

@@ -1,15 +1,13 @@
-==========================
-Getting Started With Heist
-==========================
+=====
+Heist
+=====
 
-Heist is a modular system used to create network tunnels and deploy software
-over said tunnels. Heist was primarily created to make the deployment of
-Salt easier, but the system is completely modular and can be extended to
-manage virtually and application over a network of devices/machines.
+Heist creates network tunnels for distributing and managing agents. While it has
+been originally built to deploy and manage Salt Minions, it can be used to
+distribute and manage other agents or plugins if extended to do so.
 
-Setting up Salt With Heist
-==========================
-
+Using Heist For Salt
+====================
 This tutorial will go over how to set up Heist to manage ephemeral Salt
 Minions. The whole point of Heist is to make deployment and management
 of Salt easy!
@@ -26,9 +24,9 @@ Setting up a Salt Master
 
 Don't worry, this is a snap!  Once Heist is installed you will need a
 Salt Master to connect to. If you have an existing Salt Master running
-you can skip this section.
+you can skip this section, just run `heist` on your Salt Master.
 
-Download the all-in-one Salt binary for Linux (Windows coming soon!):
+Download the all-in-one Salt binary for Linux or Mac (Windows coming soon!):
 
 For Linux:
 
@@ -76,7 +74,8 @@ Making Your Roster
 A Roster is a file used by Heist to map login information to the
 systems in your environment. This file can be very simple and just
 needs to tell Heist where your systems are and how to log into them
-via ssh:
+via ssh. Open a file called `roster.cfg` and add the data needed to connect
+to a remote system via ssh:
 
 .. code-block:: yaml
 
@@ -85,10 +84,34 @@ via ssh:
       username: fred
       password: freds_password
 
-That's it! Now you can run Heist to deploy a salt minion and have it connect to
-your master! Now that it is connected you can run remote execution and
-configuration management routines to your heart's delight using the salt
-binary you just downloaded.
+.. note::
 
-This example is very simple, heist support virtually all available authentication
-options for ssh.
+    This example is very simple, heist supports virtually all available authentication
+    options for ssh.
+
+The roster files typically all live inside of a roster directory. But to get
+started will will execute a single roster file with `heist`:
+
+.. code-block:: bash
+
+    heist -R roster.cfg
+
+Assuming your roster is correct, heist will now connect to the remote
+system, deploy a salt minion, and connect it to your running master! Now you
+can use the same binary that you started the master with to accept your new
+minion's keys:
+
+.. code-block:: bash
+
+    ./salt key -A
+
+Then give your minion a few seconds to authenticate and then run your first
+`salt` command on the newly set up minion:
+
+.. code-block:: bash
+
+    ./salt \* test.version
+
+Thats it! Now that the minion is up you can run `salt` commands on it at breakneck
+speed, the full power of Salt is at your fingertips!!
+
