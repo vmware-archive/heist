@@ -9,7 +9,7 @@ import secrets
 import heist.artifact.salt_artifact
 
 # Import 3rd-party libs
-import pop.utils.testing as testing
+import pop.mods.pop.testing as testing
 import pytest
 
 

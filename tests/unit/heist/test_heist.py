@@ -12,7 +12,7 @@ import tests.helpers.mock_hub as helpers
 
 # import 3rd-party libs
 import mock
-import pop.utils.testing as testing
+import pop.mods.pop.testing as testing
 import pytest
 
 

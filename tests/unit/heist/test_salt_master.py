@@ -14,7 +14,7 @@ import heist.heist.salt_master
 # Import 3rd-party libs
 import asyncssh.process
 import mock
-import pop.utils.testing as testing
+import pop.mods.pop.testing as testing
 import pytest
 
 

@@ -5,7 +5,7 @@ from typing import List
 # Import 3rd-party libs
 import mock
 import pop.hub
-import pop.utils.testing as testing
+import pop.mods.pop.testing as testing
 
 
 def mock_hub(subs: List[str] = None, sys_argv: List[str] = None) -> testing.MockHub:

@@ -16,7 +16,7 @@ import tests.helpers.mock_hub as helpers
 import mock
 import pytest
 import pop
-import pop.utils.testing as testing
+import pop.mods.pop.testing as testing
 
 @pytest.fixture(scope='function')
 async def hub():

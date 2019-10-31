@@ -8,7 +8,7 @@ from typing import Tuple
 # Import local libs
 import heist.roster.flat
 import pop.hub
-from pop.utils import testing
+from pop.mods.pop import testing
 
 # Import 3rd-party libs
 import mock

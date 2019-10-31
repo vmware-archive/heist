@@ -4,7 +4,7 @@ import heist.roster.init
 import tests.helpers.mock_hub as helpers
 
 # Import pop libs
-import pop.utils.testing as testing
+import pop.mods.pop.testing as testing
 import rend.exc
 
 # Import 3rd-party libs
