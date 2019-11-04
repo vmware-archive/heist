@@ -12,6 +12,9 @@ Welcome to heist's documentation!
    :glob:
 
    topics/quickstart
+   topics/rosters
+   topics/artifacts
+   topics/components
 
 
 

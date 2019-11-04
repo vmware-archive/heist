@@ -112,6 +112,14 @@ Then give your minion a few seconds to authenticate and then run your first
 
     ./salt \* test.version
 
-Thats it! Now that the minion is up you can run `salt` commands on it at breakneck
+That's it! Now that the minion is up you can run `salt` commands on it at breakneck
 speed, the full power of Salt is at your fingertips!!
+
+Tear Down
+=========
+
+Heist is able to automatically clean up your minions as well! Just soft kill
+your heist application and it will reach out to all connections, tell them to
+remove `salt` from the target systems and stop the minions! Like a proper heist
+these should be no evidence left behind!
 

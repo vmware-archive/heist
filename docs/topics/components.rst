@@ -88,4 +88,37 @@ Tunnel Subsystem
 ================
 
 The `tunnel` subsystem is used to establish communication tunnels with target
-systems
+systems. If you want to use a system for tunneling other than ssh, or you want to use
+a different ssh backend, just make a new tunnel plugin! The tunnel plugin needs to be
+able to connect to remote systems, make network tunnels, copy files and execute commands.
+
+create
+------
+
+Used to create the new tunnel instance on the hub. This is where the persistent connection
+or re-connection (if needed) logic is created.
+
+send
+----
+
+The ability to send files to the target system is implemented here.
+
+get
+----
+
+The ability to retrieve files from the target system is set up here.
+
+cmd
+----
+
+This function runs shell commands on the target system
+
+tunnel
+------
+
+This function creates a network tunnel from ports on the target system back to ports on the source system
+
+destroy
+-------
+
+Properly destroy a connection.
