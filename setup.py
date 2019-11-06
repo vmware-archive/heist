@@ -52,6 +52,7 @@ setup(name=NAME,
       url='',
       version=VERSION,
       description=DESC,
+      python_requires='>=3.6',
       classifiers=[
           'Operating System :: OS Independent',
           'Programming Language :: Python :: 3.6',
