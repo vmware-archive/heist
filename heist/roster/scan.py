@@ -12,6 +12,7 @@ from typing import Any, Dict
 
 log = logging.getLogger(__name__)
 
+
 async def read(hub) -> Dict[str, Any]:
     '''
     read data from connection to specified ports
