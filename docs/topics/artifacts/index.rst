@@ -4,11 +4,11 @@ Heist Artifacts
 
 Heist automatically downloads artifacts from the web and uses them to deploy
 agents. In the case of `Salt`, these artifacts are single binary versions of
-`Salt` that have been built using the `salt-bin` system.
+`Salt` that have been built using the `salt-bin`_ system.
 
 If you want to deploy a custom version of Salt, or you want a salt binary
 that includes a different version of python, or more dependency libraries
-this is very easy to do.
+this is very easy to do using the `salt-bin`_ project.
 
 When the artifacts are downloaded from the remote repo they are placed in
 your `artifacts_dir`. If you are running `heist` as root this dir can be
@@ -28,6 +28,16 @@ To build a custom Salt binary, follow the instructions found in the
 README.rst file in the salt-bin repo:
 https://github.com/saltstack/salt-bin/blob/master/README.rst
 
-The `salt-bin` system is completely self contained and makes it easy to
+The `salt-bin`_ system is completely self contained and makes it easy to
 customize your build of Salt. Just add deps to the requirements.txt
 file and run, or make your own requirements.txt file to use.
+
+List of Artifacts Heist Manages
+===============================
+.. toctree::
+    :maxdepth: 3
+
+    salt
+
+
+.. _`salt-bin`: https://github.com/saltstack/salt-bin

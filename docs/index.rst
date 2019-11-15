@@ -12,7 +12,7 @@ Welcome to heist's documentation!
 
    topics/quickstart
    topics/rosters
-   topics/artifacts
+   topics/artifacts/index
    topics/components
 
 
