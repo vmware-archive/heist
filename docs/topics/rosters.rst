@@ -3,13 +3,13 @@ Rosters
 =======
 
 Rosters is the system that is used to define the target systems to create
-connections to with `heist`. The default roster system is called `rend` and
+connections to with `heist`. The default roster system is called `flat` and
 uses the `pop` `rend` system to render the datasets.
 
 .. note::
 
-    By using `rend` you can make roster files using yaml, json, toml etc. and
-    template the files making it easy to allow for logic to make larger lists
+    By using the `flat` roster you can make roster files using yaml, json, toml etc.
+    and template the files making it easy to allow for logic to make larger lists
     easier. Don't worry! You don't need to know anything about `rend` to use
     rosters, just know that there is a robust system under the hood to make
     your life easier!
@@ -27,6 +27,28 @@ because it is just a password login. `heist` supports logging into systems
 using virtually any login mechanism available to ssh. The options are mapped
 directly to asyncssh and can be found here:
 https://asyncssh.readthedocs.io/en/latest/api.html#asyncssh.SSHClientConnectionOptions
+
+You can change the `rend` system used to render the rosters by setting the `renderer`
+option. By default this is set to yaml.
+
+Roster Defaults
+===============
+
+If you need to set roster options to be used for all hosts you are targeting you can
+set `roster_defaults` in the `heist` configuration file. The heist configuration file
+by default is at /etc/heist/heist.conf.
+
+.. code-block:: json
+
+    {"roster_defaults":
+      {"username": "root"}}
+
+
+List of Available Rosters
+=========================
+.. toctree::
+  ../ref/rosters/index
+
 
 Bootstrapping Minions to Existing Masters
 =========================================
