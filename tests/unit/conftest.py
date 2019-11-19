@@ -6,16 +6,25 @@
     Provide mock_hub fixture for all unit tests.
 '''
 
-import pop.mods.pop.testing as testing
+import sys
+import unittest.mock as mock
 
 import pytest
-from tests.helpers.mock_hub import hub
+
+import pop.hub
+import pop.mods.pop.testing as testing
 
 
 @pytest.fixture('session')
 def _hub():
-    # A fixture is required for asynchronous tests to access a mock_hub
-    return hub(subs=['heist.heist', 'roster', 'tunnel', 'artifact'])
+    # provides a full hub that is used as a reference by mock_hub
+    hub = pop.hub.Hub()
+
+    # strip pytest args (Akm0d)
+    with mock.patch.object(sys, 'argv', sys.argv[:1]):
+        hub.pop.sub.add('heist.heist')
+
+    return hub
 
 
 @pytest.fixture
