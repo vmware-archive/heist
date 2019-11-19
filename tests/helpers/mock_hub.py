@@ -1,9 +1,9 @@
 # import Python libs
 import sys
 from typing import List
+import unittest.mock as mock
 
 # Import 3rd-party libs
-import mock
 import pop.hub
 import pop.mods.pop.testing as testing
 
