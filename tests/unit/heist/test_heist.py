@@ -16,22 +16,16 @@ import pop.mods.pop.testing as testing
 import pytest
 
 
-@pytest.fixture
-def mock_hub() -> testing.MockHub:
-    # A fixture is required for asynchronous tests to access a mock_hub
-    return helpers.mock_hub(subs=['heist.heist', 'heist.roster'])
-
-
 class TestSaltMaster:
     def test_load_subs(self):
         mock_hub = helpers.mock_hub()
         heist.heist.init.load_subs(mock_hub)
+        mock_hub.pop.sub.add.assert_any_call(dyne_name='artifact')
         mock_hub.pop.sub.add.assert_any_call(dyne_name='rend')
         mock_hub.pop.sub.add.assert_any_call(dyne_name='roster')
         mock_hub.pop.sub.add.assert_any_call(dyne_name='tunnel')
 
-    def test_start(self):
-        mock_hub = helpers.mock_hub(['heist.heist'])
+    def test_start(self, mock_hub: testing.MockHub):
         heist.heist.init.start(mock_hub)
         mock_hub.pop.loop.start.assert_called_once()
         mock_hub.heist.init.run.assert_called_once()

@@ -1,7 +1,6 @@
 #!/usr/bin/python3
 # Import local libs
 import heist.roster.init
-import tests.helpers.mock_hub as helpers
 
 # Import pop libs
 import pop.mods.pop.testing as testing
@@ -9,12 +8,6 @@ import rend.exc
 
 # Import 3rd-party libs
 import pytest
-
-
-@pytest.fixture
-def mock_hub() -> testing.MockHub:
-    # A fixture is required for asynchronous tests to access a mock_hub
-    return helpers.mock_hub(['roster'])
 
 
 class TestSaltMaster:

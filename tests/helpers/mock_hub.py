@@ -8,7 +8,7 @@ import pop.hub
 import pop.mods.pop.testing as testing
 
 
-def mock_hub(subs: List[str] = None, sys_argv: List[str] = None) -> testing.MockHub:
+def hub(subs: List[str] = None, sys_argv: List[str] = None) -> pop.hub.Hub:
     hub = pop.hub.Hub()
     if subs is None:
         subs = []
@@ -29,4 +29,8 @@ def mock_hub(subs: List[str] = None, sys_argv: List[str] = None) -> testing.Mock
         else:
             hub.pop.sub.add(dyne_name=sub)
 
-    return testing.MockHub(hub)
+    return hub
+
+
+def mock_hub(subs: List[str] = None, sys_argv: List[str] = None) -> testing.MockHub:
+    return testing.MockHub(hub(subs, sys_argv))

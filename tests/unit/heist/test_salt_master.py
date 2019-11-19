@@ -19,14 +19,14 @@ import pytest
 
 
 @pytest.fixture
-def mk_config_data(hub, roster):
+def mk_config_data(mock_hub, roster):
     # Setup
     t_name = secrets.token_hex()
-    hub.heist.ROSTERS = {t_name: roster}
+    mock_hub.heist.ROSTERS = {t_name: roster}
     root_dir = 'arbitrary_string'
-    minion_config = heist.heist.salt_master.mk_config(hub, root_dir, t_name)
+    minion_config = heist.heist.salt_master.mk_config(mock_hub, root_dir, t_name)
     # Pass resources to test
-    yield minion_config, root_dir, hub.heist.ROSTERS
+    yield minion_config, root_dir, mock_hub.heist.ROSTERS
     # TearDown
     if os.path.exists(minion_config):
         os.remove(minion_config)
