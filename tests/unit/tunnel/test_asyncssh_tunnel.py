@@ -1,9 +1,7 @@
 #!/usr/bin/python3
 # Import local libs
 import heist.tunnel.asyncssh_tunnel as asyncssh_tunnel
-
-# Import 3rd Party libs
-import mock
+import unittest.mock as mock
 
 
 class TestAsyncSSH:

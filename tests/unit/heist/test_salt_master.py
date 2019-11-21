@@ -7,13 +7,13 @@ import asyncio
 import os
 import secrets
 from typing import Any, Dict, Tuple
+import unittest.mock as mock
 
 # Import Local libs
 import heist.heist.salt_master
 
 # Import 3rd-party libs
 import asyncssh.process
-import mock
 import pop.mods.pop.testing as testing
 import pytest
 

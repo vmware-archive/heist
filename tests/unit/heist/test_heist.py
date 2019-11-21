@@ -8,9 +8,9 @@
 
 # Import local libs
 import heist.heist.init
+import unittest.mock as mock
 
 # import 3rd-party libs
-import mock
 import pop.mods.pop.testing as testing
 import pytest
 
