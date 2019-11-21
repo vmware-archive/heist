@@ -3,3 +3,4 @@ asyncssh>=1.18.0
 pop>=7.3.0
 pyyaml>=5.1.2
 rend>=2.0.0
+ClusterShell>=1.8.1

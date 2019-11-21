@@ -1,4 +1,5 @@
 asynctest>=0.13.0
+jinja2>=2.10.3
 mock>=3.0.5
 M2Crypto>=0.35.2
 pidfile>=0.1.1
