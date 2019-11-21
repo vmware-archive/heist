@@ -8,7 +8,6 @@
 
 # Import local libs
 import heist.heist.init
-import tests.helpers.mock_hub as helpers
 
 # import 3rd-party libs
 import mock
