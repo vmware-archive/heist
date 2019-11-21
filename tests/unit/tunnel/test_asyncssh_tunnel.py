@@ -1,7 +1,6 @@
 #!/usr/bin/python3
 # Import local libs
 import heist.tunnel.asyncssh_tunnel as asyncssh_tunnel
-import tests.helpers.mock_hub as helpers
 
 # Import 3rd Party libs
 import mock
