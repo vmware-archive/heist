@@ -23,6 +23,7 @@ host_num_id:
   id: 1234
 '''
 
+
 @pytest.fixture(scope='function')
 async def hub():
     '''
@@ -36,6 +37,7 @@ async def hub():
     hub.pop.sub.add(dyne_name='rend')
     yield hub
     await hub.heist.init.clean()
+
 
 @pytest.fixture
 def flat_roster():
@@ -113,3 +115,19 @@ class TestFlatFile:
         result = await heist.roster.flat.read(hub)
 
         assert result['localhost']['user'] == 'heist'
+
+    @pytest.mark.asyncio
+    async def test_roster_file(self, mock_hub: testing.MockHub, flat_roster: Tuple[str, str]):
+        '''
+        test when using roster_file in flat roster
+        '''
+        # Setup
+        temp_dir, roster = flat_roster
+        mock_hub.OPT = {'heist': {'renderer': 'jinja|yaml',
+                                  'roster_file': roster}}
+
+        # Execute
+        await heist.roster.flat.read(mock_hub)
+
+        # Verify
+        mock_hub.rend.init.parse.assert_called_once_with(fn=roster, pipe='jinja|yaml')
