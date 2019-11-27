@@ -19,6 +19,11 @@ SETUP_DIRNAME = os.path.dirname(__file__)
 if not SETUP_DIRNAME:
     SETUP_DIRNAME = os.getcwd()
 
+with open('requirements.txt') as f:
+    REQUIREMENTS = f.read().splitlines()
+
+with open('requirements-test.txt') as f:
+    TEST_REQUIREMENTS = f.read().splitlines()
 
 class Clean(Command):
     user_options = []
@@ -53,6 +58,8 @@ setup(name=NAME,
       version=VERSION,
       description=DESC,
       python_requires='>=3.6',
+      install_requires=REQUIREMENTS,
+      tests_require=TEST_REQUIREMENTS,
       classifiers=[
           'Operating System :: OS Independent',
           'Programming Language :: Python :: 3.6',
