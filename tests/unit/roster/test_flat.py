@@ -4,6 +4,7 @@ import sys
 import tempfile
 import textwrap
 from typing import Tuple
+import unittest.mock as mock
 
 # Import local libs
 import heist.roster.flat
@@ -11,7 +12,6 @@ import pop.hub
 from pop.mods.pop import testing
 
 # Import 3rd-party libs
-import mock
 import pytest
 
 

@@ -8,12 +8,12 @@ import tempfile
 import time
 import uuid
 from typing import Set, Tuple, Generator
+import unittest.mock as mock
 
 # Import local libs
 import tests.helpers.sftp_server as sftp_server
 
 # Import 3rd-party libs
-import mock
 import psutil
 import pytest
 from pop.hub import Hub
