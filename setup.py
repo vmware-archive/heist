@@ -19,6 +19,8 @@ SETUP_DIRNAME = os.path.dirname(__file__)
 if not SETUP_DIRNAME:
     SETUP_DIRNAME = os.getcwd()
 
+with open('README.rst', encoding='utf-8') as f:
+    LONG_DESC = f.read()
 
 class Clean(Command):
     user_options = []
@@ -52,6 +54,8 @@ setup(name=NAME,
       url='',
       version=VERSION,
       description=DESC,
+      long_description=LONG_DESC,
+      long_description_content_type='text/x-rst',
       python_requires='>=3.6',
       classifiers=[
           'Operating System :: OS Independent',
