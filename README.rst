@@ -48,7 +48,8 @@ Now you can just run it!
 
 .. code-block:: bash
 
-    ./salt master
+    chmod +x salt
+    sudo ./salt master
 
 Now you have a running Salt Master to control your minions!
 
