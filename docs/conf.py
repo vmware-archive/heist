@@ -21,11 +21,11 @@ sys.path.insert(0, os.path.abspath(os.path.join(docs_basepath, os.pardir)))
 # -- Project information -----------------------------------------------------
 
 project = 'heist'
-copyright = '2019, Thomas S Hatch'
+copyright = '2020, Thomas S Hatch'
 author = 'Thomas S Hatch'
 
 # The full version, including alpha/beta/rc tags
-release = '2.2.0'
+release = '2.3'
 
 master_doc = 'index'
 
