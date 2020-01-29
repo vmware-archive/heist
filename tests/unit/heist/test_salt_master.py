@@ -50,8 +50,6 @@ class TestSaltMaster:
 
     @pytest.mark.parametrize('roster',
                              [{'publish_port': '4505'},
-                              {'master': '1.1.1.1',
-                               'master_port': '4506'},
                               {}])
     def test_mk_config(self, roster, mk_config_data: Tuple[str, str]):
         '''
@@ -74,6 +72,32 @@ class TestSaltMaster:
         else:
             assert not roster_data[list(roster_data.keys())[0]].get('bootstrap')
 
+        assert conf['root_dir'] == root_dir
+
+    def test_mk_config_bootstrap(self, mock_hub):
+        '''
+        test heist.salt_master.mk_config when expecting bootstrap to be
+        returned
+        '''
+        t_name = secrets.token_hex()
+        root_dir = 'test_dir'
+        roster = {'master': '1.1.1.1', 'master_port': '4506'}
+        mock_hub.heist.ROSTERS = {t_name: roster}
+        mock_hub.heist.init.ip_is_loopback.return_value = False
+        minion_config = heist.heist.salt_master.mk_config(mock_hub, root_dir, t_name)
+        with open(minion_config, 'r') as min_conf:
+            conf = dict(line.strip().split(': ') for line in min_conf.readlines())
+
+        for key, default in [('master', '127.0.0.1'),
+                             ('master_port', '44506'),
+                             ('publish_port', '44505')]:
+            if roster.get(key):
+                assert conf[key] == roster[key]
+            else:
+                assert conf[key] == default
+
+        roster_data = mock_hub.heist.ROSTERS
+        assert roster_data[list(roster_data.keys())[0]]['bootstrap']
         assert conf['root_dir'] == root_dir
 
     @pytest.mark.parametrize('roster',
