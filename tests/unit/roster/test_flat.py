@@ -127,7 +127,8 @@ class TestFlatFile:
                                   'roster_file': roster}}
 
         # Execute
-        await heist.roster.flat.read(mock_hub)
+        ret = await heist.roster.flat.read(mock_hub)
 
         # Verify
+        assert ret.return_value()
         mock_hub.rend.init.parse.assert_called_once_with(fn=roster, pipe='jinja|yaml')
