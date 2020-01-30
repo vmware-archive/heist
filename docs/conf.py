@@ -25,7 +25,7 @@ copyright = '2020, Thomas S Hatch'
 author = 'Thomas S Hatch'
 
 # The full version, including alpha/beta/rc tags
-release = '2.3'
+release = '2.4'
 
 master_doc = 'index'
 
