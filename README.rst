@@ -2,6 +2,18 @@
 Heist
 =====
 
+MOVED TO GITLAB
+===============
+
+POP projects developed by Saltstack are being moved to Gitlab.
+
+The new location of idem is here:
+
+https://gitlab.com/saltstack/pop/heist
+
+Intro
+=====
+
 Heist creates network tunnels for distributing and managing agents. While it has
 been originally built to deploy and manage Salt Minions, it can be used to
 distribute and manage other agents or plugins if extended to do so.
